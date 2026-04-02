@@ -1,92 +1,144 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Excel Merge</title>
+
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/file-saver/dist/FileSaver.min.js"></script>
+
   <style>
+    :root {
+      --bg: #f5f5f5;
+      --card: #ffffff;
+      --text: #111111;
+      --muted: #6b7280;
+      --line: #dddddd;
+      --soft: #f0f0f0;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
-      font-family: Arial, sans-serif;
-      background: #f7f7f7;
       margin: 0;
-      padding: 20px;
-      color: #222;
+      padding: 24px;
+      font-family: Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
     }
 
     .container {
-      max-width: 1100px;
+      max-width: 980px;
       margin: 0 auto;
     }
 
+    .header {
+      margin-bottom: 20px;
+    }
+
+    .title-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+
+    .title-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: #111;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
     h1 {
-      margin: 0 0 6px 0;
+      margin: 0;
+      font-size: 28px;
     }
 
     .subtitle {
-      color: #666;
-      margin-bottom: 20px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
     }
 
     .card {
-      background: #fff;
-      padding: 20px;
-      border-radius: 10px;
-      border: 1px solid #ddd;
-      margin-bottom: 20px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 18px;
+      margin-bottom: 18px;
     }
 
     .toolbar {
-      display: flex;
+      display: grid;
+      grid-template-columns: 1.5fr 180px auto auto;
       gap: 10px;
-      flex-wrap: wrap;
       align-items: center;
     }
 
-    button {
-      padding: 10px 14px;
-      border: none;
-      border-radius: 6px;
-      background: #111;
-      color: #fff;
-      cursor: pointer;
-    }
-
-    button.secondary {
-      background: #d9d9d9;
-      color: #111;
-    }
-
-    #status {
-      margin-top: 12px;
-      color: #333;
-    }
-
-    .kpi {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 16px;
-    }
-
-    .kpi-box {
-      background: #fff;
-      border: 1px solid #ddd;
+    input[type="file"],
+    input[type="date"] {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
       border-radius: 10px;
-      padding: 20px;
-      text-align: center;
+      background: white;
     }
 
-    .kpi-box h3 {
-      margin: 0 0 8px 0;
-      font-size: 14px;
-      color: #666;
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 11px 14px;
+      cursor: pointer;
+      background: #111;
+      color: white;
       font-weight: 600;
     }
 
-    .kpi-box h2 {
-      margin: 0;
-      font-size: 30px;
+    button.secondary {
+      background: #e5e7eb;
+      color: #111;
+    }
+
+    .status {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 14px;
+      min-height: 20px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 14px 0;
+      font-size: 16px;
+    }
+
+    .mini-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: var(--soft);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
     }
 
     table {
@@ -95,17 +147,34 @@
     }
 
     th, td {
-      padding: 10px;
-      border: 1px solid #e5e5e5;
-      text-align: left;
+      border: 1px solid var(--line);
+      padding: 10px 12px;
+      font-size: 14px;
     }
 
     th {
-      background: #f2f2f2;
+      background: #f8f8f8;
+      text-align: left;
     }
 
-    @media (max-width: 768px) {
-      .kpi {
+    .empty {
+      color: var(--muted);
+      font-size: 14px;
+      padding: 6px 0 0 0;
+    }
+
+    .footer-note {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 8px;
+    }
+
+    @media (max-width: 860px) {
+      .toolbar {
+        grid-template-columns: 1fr;
+      }
+
+      .stats-grid {
         grid-template-columns: 1fr;
       }
     }
@@ -113,63 +182,58 @@
 </head>
 <body>
   <div class="container">
-    <h1>Excel Merge</h1>
-    <div class="subtitle">Excel siparişlerini birleştir, analiz et, indir</div>
+    <div class="header">
+      <div class="title-row">
+        <div class="title-icon">📄</div>
+        <h1>Excel Merge</h1>
+      </div>
+      <p class="subtitle">Upload, merge, filter and export daily order lists.</p>
+    </div>
 
     <div class="card">
       <div class="toolbar">
         <input type="file" id="fileInput" accept=".xlsx,.xls" />
-        <button id="downloadBtn" type="button">Excel İndir</button>
-        <button class="secondary" id="clearBtn" type="button">Temizle</button>
+        <input type="date" id="uploadDate" />
+        <button id="downloadBtn" type="button">Export Excel</button>
+        <button id="clearBtn" class="secondary" type="button">Clear Data</button>
       </div>
-      <div id="status"></div>
+      <div class="status" id="status"></div>
     </div>
 
-    <div class="kpi">
-      <div class="kpi-box">
-        <h3>Toplam Satış</h3>
-        <h2 id="totalSales">0</h2>
+    <div class="stats-grid">
+      <div class="card">
+        <h2 class="section-title"><span class="mini-icon">📅</span>Daily size totals</h2>
+        <div id="dailyTableWrap"></div>
+        <div class="footer-note">Shows totals for the selected upload date.</div>
       </div>
-      <div class="kpi-box">
-        <h3>Farklı SKU</h3>
-        <h2 id="totalSku">0</h2>
-      </div>
-      <div class="kpi-box">
-        <h3>Farklı Size</h3>
-        <h2 id="totalSize">0</h2>
-      </div>
-    </div>
 
-    <div class="card">
-      <h3>Top SKU</h3>
-      <table id="skuTable">
-        <thead>
-          <tr>
-            <th>SKU</th>
-            <th>Size</th>
-            <th>Quantity</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
+      <div class="card">
+        <h2 class="section-title"><span class="mini-icon">📈</span>Month-to-date size totals</h2>
+        <div id="monthlyTableWrap"></div>
+        <div class="footer-note">Cumulative totals for the selected month.</div>
+      </div>
     </div>
   </div>
 
   <script>
-    let data = JSON.parse(localStorage.getItem("salesData") || "[]");
+    let historyData = JSON.parse(localStorage.getItem("salesHistory") || "[]");
+    let latestProcessedData = JSON.parse(localStorage.getItem("latestProcessedData") || "[]");
 
     const fileInput = document.getElementById("fileInput");
-    const statusEl = document.getElementById("status");
-    const totalSalesEl = document.getElementById("totalSales");
-    const totalSkuEl = document.getElementById("totalSku");
-    const totalSizeEl = document.getElementById("totalSize");
-    const skuTableBody = document.querySelector("#skuTable tbody");
+    const uploadDateInput = document.getElementById("uploadDate");
     const downloadBtn = document.getElementById("downloadBtn");
     const clearBtn = document.getElementById("clearBtn");
+    const statusEl = document.getElementById("status");
+    const dailyTableWrap = document.getElementById("dailyTableWrap");
+    const monthlyTableWrap = document.getElementById("monthlyTableWrap");
+
+    const today = new Date().toISOString().slice(0, 10);
+    uploadDateInput.value = today;
 
     fileInput.addEventListener("change", handleFile);
     downloadBtn.addEventListener("click", downloadExcel);
     clearBtn.addEventListener("click", clearData);
+    uploadDateInput.addEventListener("change", renderDashboard);
 
     function normalizeSku(value) {
       return String(value || "").trim();
@@ -180,7 +244,7 @@
       if (!match) return null;
 
       return {
-        text: Number(match[1]) + "x" + Number(match[2]),
+        text: `${Number(match[1])}x${Number(match[2])}`,
         w: Number(match[1]),
         h: Number(match[2])
       };
@@ -193,9 +257,9 @@
       return false;
     }
 
-    function sizeSortText(a, b) {
-      const sa = extractSize(a.size || "");
-      const sb = extractSize(b.size || "");
+    function compareSizeText(a, b) {
+      const sa = extractSize(a);
+      const sb = extractSize(b);
 
       if (!sa && !sb) return 0;
       if (!sa) return 1;
@@ -204,10 +268,54 @@
       return sa.w - sb.w || sa.h - sb.h;
     }
 
+    function buildSizeTotals(records) {
+      const totals = {};
+
+      records.forEach(item => {
+        if (!item.size) return;
+        totals[item.size] = (totals[item.size] || 0) + item.quantity;
+      });
+
+      return Object.entries(totals)
+        .sort((a, b) => compareSizeText(a[0], b[0]))
+        .map(([size, quantity]) => ({ size, quantity }));
+    }
+
+    function renderSimpleTable(container, rows, leftHeader, rightHeader) {
+      if (!rows.length) {
+        container.innerHTML = '<div class="empty">No data</div>';
+        return;
+      }
+
+      let html = `
+        <table>
+          <thead>
+            <tr>
+              <th>${leftHeader}</th>
+              <th style="text-align:center;">${rightHeader}</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      rows.forEach(row => {
+        html += `
+          <tr>
+            <td>${row.size}</td>
+            <td style="text-align:center;">${row.quantity}</td>
+          </tr>
+        `;
+      });
+
+      html += `</tbody></table>`;
+      container.innerHTML = html;
+    }
+
     function handleFile(event) {
       const file = event.target.files[0];
       if (!file) return;
 
+      const selectedDate = uploadDateInput.value || today;
       const reader = new FileReader();
 
       reader.onload = function(e) {
@@ -215,17 +323,17 @@
           const workbook = XLSX.read(e.target.result, { type: "binary" });
           const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
           const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: "" });
-          processData(rows);
+          processData(rows, selectedDate);
         } catch (error) {
           console.error(error);
-          statusEl.textContent = "Dosya okunurken hata oluştu.";
+          statusEl.textContent = "Could not read the file.";
         }
       };
 
       reader.readAsBinaryString(file);
     }
 
-    function processData(rows) {
+    function processData(rows, uploadDate) {
       const map = {};
       let keptRows = 0;
       let skippedRows = 0;
@@ -263,91 +371,127 @@
         keptRows++;
       });
 
-      const newData = Object.values(map);
+      latestProcessedData = Object.values(map)
+        .sort((a, b) => compareSizeText(a.size, b.size) || a.sku.localeCompare(b.sku));
 
-      newData.forEach((item) => {
-        const existing = data.find(d => d.sku === item.sku);
+      latestProcessedData.forEach(item => {
+        const existing = historyData.find(
+          h => h.uploadDate === uploadDate && h.sku === item.sku
+        );
+
         if (existing) {
           existing.quantity += item.quantity;
         } else {
-          data.push(item);
+          historyData.push({
+            sku: item.sku,
+            size: item.size,
+            quantity: item.quantity,
+            uploadDate
+          });
         }
       });
 
-      localStorage.setItem("salesData", JSON.stringify(data));
-      render();
+      localStorage.setItem("salesHistory", JSON.stringify(historyData));
+      localStorage.setItem("latestProcessedData", JSON.stringify(latestProcessedData));
 
-      statusEl.textContent = keptRows + " satır alındı, " + skippedRows + " satır atlandı. 5x7'den küçük ölçüler kaydedilmedi.";
+      statusEl.textContent =
+        `${keptRows} rows saved, ${skippedRows} rows skipped. Sizes below 5x7 were ignored.`;
+
+      renderDashboard();
     }
 
-    function render() {
-      const totalSales = data.reduce((sum, item) => sum + item.quantity, 0);
-      const sizes = [...new Set(data.map(d => d.size).filter(Boolean))];
+    function renderDashboard() {
+      const selectedDate = uploadDateInput.value || today;
+      const monthPrefix = selectedDate.slice(0, 7);
 
-      totalSalesEl.textContent = totalSales;
-      totalSkuEl.textContent = data.length;
-      totalSizeEl.textContent = sizes.length;
+      const dailyRows = historyData.filter(item => item.uploadDate === selectedDate);
+      const monthlyRows = historyData.filter(item => item.uploadDate.startsWith(monthPrefix));
 
-      const sorted = [...data].sort((a, b) => b.quantity - a.quantity).slice(0, 50);
+      const dailyTotals = buildSizeTotals(dailyRows);
+      const monthlyTotals = buildSizeTotals(monthlyRows);
 
-      skuTableBody.innerHTML = "";
+      renderSimpleTable(dailyTableWrap, dailyTotals, "SIZE", "QUANTITY");
+      renderSimpleTable(monthlyTableWrap, monthlyTotals, "SIZE", "QUANTITY");
+    }
 
-      if (sorted.length === 0) {
-        skuTableBody.innerHTML = '<tr><td colspan="3">Veri yok</td></tr>';
+    async function downloadExcel() {
+      if (!latestProcessedData.length) {
+        statusEl.textContent = "No processed data to export.";
         return;
       }
 
-      sorted.forEach(item => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${item.sku}</td>
-          <td>${item.size || ""}</td>
-          <td>${item.quantity}</td>
-        `;
-        skuTableBody.appendChild(tr);
-      });
-    }
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Sales");
 
-    function downloadExcel() {
-      if (!data.length) {
-        statusEl.textContent = "İndirilecek veri yok.";
-        return;
-      }
+      const longestSkuLength = Math.max(
+        3,
+        ...latestProcessedData.map(item => String(item.sku || "").length)
+      );
 
-      const exportData = [...data]
-        .sort((a, b) => sizeSortText(a, b))
-        .map(item => ({
-          SKU: item.sku,
-          QUANTITY: item.quantity
-        }));
-
-      const ws = XLSX.utils.json_to_sheet(exportData, {
-        header: ["SKU", "QUANTITY"]
-      });
-
-      ws["!cols"] = [
-        { wch: 32 },
-        { wch: 14 }
+      worksheet.columns = [
+        { header: "SKU", key: "sku", width: longestSkuLength + 3 },
+        { header: "QUANTITY", key: "quantity", width: 14 }
       ];
 
-      const rowCount = exportData.length + 1;
-      ws["!rows"] = Array.from({ length: rowCount }, () => ({ hpx: 20 }));
+      latestProcessedData.forEach(item => {
+        worksheet.addRow({
+          sku: item.sku,
+          quantity: item.quantity
+        });
+      });
 
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Sales");
-      XLSX.writeFile(wb, "excel_merge_output.xlsx");
+      worksheet.eachRow((row, rowNumber) => {
+        row.height = 20;
 
-      statusEl.textContent = "Excel dosyası indirildi.";
+        row.eachCell((cell, colNumber) => {
+          cell.border = {
+            top: { style: "thin" },
+            left: { style: "thin" },
+            bottom: { style: "thin" },
+            right: { style: "thin" }
+          };
+
+          cell.font = {
+            name: "Arial",
+            size: 11,
+            bold: rowNumber === 1
+          };
+
+          if (rowNumber === 1) {
+            cell.alignment = {
+              vertical: "middle",
+              horizontal: "center"
+            };
+          } else {
+            cell.alignment = {
+              vertical: "middle",
+              horizontal: colNumber === 1 ? "left" : "center"
+            };
+          }
+        });
+      });
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      saveAs(
+        new Blob([buffer], {
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        }),
+        "excel_merge_output.xlsx"
+      );
+
+      statusEl.textContent = "Excel file exported.";
     }
 
     function clearData() {
-      localStorage.removeItem("salesData");
-      data = [];
-      render();
-      statusEl.textContent = "Veri temizlendi.";
+      localStorage.removeItem("salesHistory");
+      localStorage.removeItem("latestProcessedData");
+      historyData = [];
+      latestProcessedData = [];
+      renderDashboard();
+      statusEl.textContent = "All data cleared.";
     }
 
-    render();
+    renderDashboard();
   </script>
 </body>
 </html>
