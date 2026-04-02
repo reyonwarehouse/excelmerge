@@ -12,14 +12,16 @@
   <style>
     :root {
       --bg: #f3f4f6;
-      --surface: rgba(255, 255, 255, 0.78);
-      --surface-strong: rgba(255, 255, 255, 0.92);
+      --surface: rgba(255, 255, 255, 0.82);
+      --surface-strong: rgba(255, 255, 255, 0.94);
       --text: #111111;
       --muted: #6b7280;
       --line: rgba(17, 17, 17, 0.08);
       --line-soft: rgba(17, 17, 17, 0.05);
       --shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
       --radius: 22px;
+      --radius-sm: 16px;
+      --accent: #111111;
     }
 
     * {
@@ -30,7 +32,7 @@
       margin: 0;
       padding: 0;
       background:
-        radial-gradient(circle at top left, rgba(255,255,255,0.8), transparent 32%),
+        radial-gradient(circle at top left, rgba(255,255,255,0.9), transparent 32%),
         linear-gradient(180deg, #f7f7f8 0%, #f2f3f5 100%);
       color: var(--text);
       font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
@@ -45,7 +47,7 @@
     }
 
     .container {
-      max-width: 980px;
+      max-width: 1160px;
       margin: 0 auto;
     }
 
@@ -75,8 +77,8 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background: rgba(255,255,255,0.72);
-      border: 1px solid rgba(255,255,255,0.7);
+      background: rgba(255,255,255,0.78);
+      border: 1px solid rgba(255,255,255,0.8);
       box-shadow: var(--shadow);
       font-size: 18px;
       backdrop-filter: blur(14px);
@@ -94,12 +96,12 @@
       color: var(--muted);
       font-size: 14px;
       line-height: 1.6;
-      max-width: 640px;
+      max-width: 760px;
     }
 
     .panel {
       background: var(--surface);
-      border: 1px solid rgba(255,255,255,0.7);
+      border: 1px solid rgba(255,255,255,0.72);
       box-shadow: var(--shadow);
       border-radius: var(--radius);
       backdrop-filter: blur(18px);
@@ -112,7 +114,7 @@
 
     .toolbar {
       display: grid;
-      grid-template-columns: 1.5fr 180px auto auto;
+      grid-template-columns: 1fr 1fr 170px auto auto;
       gap: 12px;
       align-items: center;
     }
@@ -169,31 +171,40 @@
       color: var(--muted);
       font-size: 13px;
       padding-left: 2px;
+      line-height: 1.5;
     }
 
-    .stats-grid {
+    .dashboard-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 18px;
     }
 
-    .stat-card {
+    .source-card {
       padding: 20px;
     }
 
-    .section-title {
+    .source-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .source-title {
       display: flex;
       align-items: center;
       gap: 10px;
-      margin: 0 0 14px 0;
-      font-size: 16px;
+      margin: 0;
+      font-size: 18px;
       font-weight: 600;
       letter-spacing: -0.02em;
     }
 
     .mini-icon {
-      width: 30px;
-      height: 30px;
+      width: 32px;
+      height: 32px;
       border-radius: 10px;
       display: inline-flex;
       align-items: center;
@@ -203,11 +214,40 @@
       font-size: 14px;
     }
 
+    .pill {
+      padding: 7px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      color: #111;
+      background: rgba(17,17,17,0.05);
+      white-space: nowrap;
+    }
+
+    .inner-stack {
+      display: grid;
+      gap: 14px;
+    }
+
+    .sub-card {
+      border: 1px solid var(--line-soft);
+      border-radius: var(--radius-sm);
+      background: rgba(255,255,255,0.68);
+      padding: 16px;
+    }
+
+    .sub-title {
+      margin: 0 0 12px 0;
+      font-size: 14px;
+      font-weight: 600;
+      color: #111;
+      letter-spacing: -0.01em;
+    }
+
     .table-shell {
       overflow: hidden;
-      border-radius: 16px;
+      border-radius: 14px;
       border: 1px solid var(--line-soft);
-      background: rgba(255,255,255,0.66);
+      background: rgba(255,255,255,0.72);
     }
 
     table {
@@ -244,7 +284,7 @@
     }
 
     .footer-note {
-      margin-top: 12px;
+      margin-top: 10px;
       color: var(--muted);
       font-size: 12px;
       line-height: 1.5;
@@ -289,22 +329,22 @@
       margin-top: 10px;
     }
 
-    @media (max-width: 860px) {
+    @media (max-width: 980px) {
       .toolbar {
         grid-template-columns: 1fr;
       }
 
-      .stats-grid {
+      .dashboard-grid {
         grid-template-columns: 1fr;
-      }
-
-      h1 {
-        font-size: 27px;
       }
 
       .hero-top {
         flex-direction: column;
         align-items: flex-start;
+      }
+
+      h1 {
+        font-size: 27px;
       }
     }
   </style>
@@ -318,9 +358,7 @@
           <h2 class="login-title">Excel Merge</h2>
         </div>
       </div>
-      <p class="login-subtitle">
-        Enter the password to access the dashboard.
-      </p>
+      <p class="login-subtitle">Enter the password to access the dashboard.</p>
       <div class="login-actions">
         <input type="password" id="passwordInput" placeholder="Password" />
         <button id="loginBtn" type="button">Enter</button>
@@ -340,13 +378,14 @@
           <button id="logoutBtn" class="secondary" type="button">Log Out</button>
         </div>
         <p class="subtitle">
-          Upload a daily order file, merge matching SKUs, ignore sizes below 5x7, review size-based totals, and export a clean Excel output.
+          Upload daily order files or Amazon FBA files, keep them separate, review size-based totals, and export the latest processed file as a clean Excel sheet.
         </p>
       </div>
 
       <div class="panel toolbar-card">
         <div class="toolbar">
-          <input type="file" id="fileInput" accept=".xlsx,.xls" />
+          <input type="file" id="dailyFileInput" accept=".xlsx,.xls" />
+          <input type="file" id="fbaFileInput" accept=".xlsx,.xls" />
           <input type="date" id="uploadDate" />
           <button id="downloadBtn" type="button">Export Excel</button>
           <button id="clearBtn" class="secondary" type="button">Clear Data</button>
@@ -354,17 +393,47 @@
         <div class="status" id="status"></div>
       </div>
 
-      <div class="stats-grid">
-        <div class="panel stat-card">
-          <h2 class="section-title"><span class="mini-icon">◌</span>Daily size totals</h2>
-          <div id="dailyTableWrap"></div>
-          <div class="footer-note">Totals for the selected upload date.</div>
+      <div class="dashboard-grid">
+        <div class="panel source-card">
+          <div class="source-header">
+            <h2 class="source-title"><span class="mini-icon">◌</span>Daily Orders</h2>
+            <div class="pill" id="dailySummary">No data</div>
+          </div>
+
+          <div class="inner-stack">
+            <div class="sub-card">
+              <h3 class="sub-title">Daily size totals</h3>
+              <div id="dailyOrdersDailyWrap"></div>
+              <div class="footer-note">Totals for the selected date.</div>
+            </div>
+
+            <div class="sub-card">
+              <h3 class="sub-title">Month-to-date size totals</h3>
+              <div id="dailyOrdersMonthlyWrap"></div>
+              <div class="footer-note">Running totals for the selected month.</div>
+            </div>
+          </div>
         </div>
 
-        <div class="panel stat-card">
-          <h2 class="section-title"><span class="mini-icon">↗</span>Month-to-date size totals</h2>
-          <div id="monthlyTableWrap"></div>
-          <div class="footer-note">Running totals for the selected month.</div>
+        <div class="panel source-card">
+          <div class="source-header">
+            <h2 class="source-title"><span class="mini-icon">↗</span>Amazon FBA</h2>
+            <div class="pill" id="fbaSummary">No data</div>
+          </div>
+
+          <div class="inner-stack">
+            <div class="sub-card">
+              <h3 class="sub-title">Daily size totals</h3>
+              <div id="fbaDailyWrap"></div>
+              <div class="footer-note">Totals for the selected date.</div>
+            </div>
+
+            <div class="sub-card">
+              <h3 class="sub-title">Month-to-date size totals</h3>
+              <div id="fbaMonthlyWrap"></div>
+              <div class="footer-note">Running totals for the selected month.</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -384,13 +453,19 @@
     const loginError = document.getElementById("loginError");
     const logoutBtn = document.getElementById("logoutBtn");
 
-    const fileInput = document.getElementById("fileInput");
+    const dailyFileInput = document.getElementById("dailyFileInput");
+    const fbaFileInput = document.getElementById("fbaFileInput");
     const uploadDateInput = document.getElementById("uploadDate");
     const downloadBtn = document.getElementById("downloadBtn");
     const clearBtn = document.getElementById("clearBtn");
     const statusEl = document.getElementById("status");
-    const dailyTableWrap = document.getElementById("dailyTableWrap");
-    const monthlyTableWrap = document.getElementById("monthlyTableWrap");
+
+    const dailyOrdersDailyWrap = document.getElementById("dailyOrdersDailyWrap");
+    const dailyOrdersMonthlyWrap = document.getElementById("dailyOrdersMonthlyWrap");
+    const fbaDailyWrap = document.getElementById("fbaDailyWrap");
+    const fbaMonthlyWrap = document.getElementById("fbaMonthlyWrap");
+    const dailySummary = document.getElementById("dailySummary");
+    const fbaSummary = document.getElementById("fbaSummary");
 
     const today = new Date().toISOString().slice(0, 10);
     uploadDateInput.value = today;
@@ -401,7 +476,14 @@
     });
     logoutBtn.addEventListener("click", handleLogout);
 
-    fileInput.addEventListener("change", handleFile);
+    dailyFileInput.addEventListener("change", function(e) {
+      handleFile(e, "daily");
+    });
+
+    fbaFileInput.addEventListener("change", function(e) {
+      handleFile(e, "fba");
+    });
+
     downloadBtn.addEventListener("click", downloadExcel);
     clearBtn.addEventListener("click", clearData);
     uploadDateInput.addEventListener("change", renderDashboard);
@@ -525,7 +607,24 @@
       container.innerHTML = html;
     }
 
-    function handleFile(event) {
+    function buildSourceSummary(source, selectedDate) {
+      const monthPrefix = selectedDate.slice(0, 7);
+
+      const dailyRows = historyData.filter(item =>
+        item.source === source && item.uploadDate === selectedDate
+      );
+
+      const monthlyRows = historyData.filter(item =>
+        item.source === source && item.uploadDate.startsWith(monthPrefix)
+      );
+
+      const dailyQty = dailyRows.reduce((sum, item) => sum + item.quantity, 0);
+      const monthlyQty = monthlyRows.reduce((sum, item) => sum + item.quantity, 0);
+
+      return `Day ${dailyQty} · Month ${monthlyQty}`;
+    }
+
+    function handleFile(event, source) {
       const file = event.target.files[0];
       if (!file) return;
 
@@ -537,7 +636,7 @@
           const workbook = XLSX.read(e.target.result, { type: "binary" });
           const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
           const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: "" });
-          processData(rows, selectedDate);
+          processData(rows, selectedDate, source, file.name);
         } catch (error) {
           console.error(error);
           statusEl.textContent = "Could not read the file.";
@@ -547,7 +646,7 @@
       reader.readAsBinaryString(file);
     }
 
-    function processData(rows, uploadDate) {
+    function processData(rows, uploadDate, source, fileName) {
       const map = {};
       let keptRows = 0;
       let skippedRows = 0;
@@ -577,7 +676,8 @@
           map[key] = {
             sku: skuRaw,
             size: sizeText,
-            quantity: 0
+            quantity: 0,
+            source: source
           };
         }
 
@@ -586,11 +686,18 @@
       });
 
       latestProcessedData = Object.values(map)
-        .sort((a, b) => compareSizeText(a.size, b.size) || a.sku.localeCompare(b.sku));
+        .sort((a, b) => compareSizeText(a.size, b.size) || a.sku.localeCompare(b.sku))
+        .map(item => ({
+          ...item,
+          uploadDate
+        }));
 
       latestProcessedData.forEach(item => {
         const existing = historyData.find(
-          h => h.uploadDate === uploadDate && h.sku === item.sku
+          h =>
+            h.uploadDate === uploadDate &&
+            h.sku === item.sku &&
+            h.source === item.source
         );
 
         if (existing) {
@@ -600,7 +707,8 @@
             sku: item.sku,
             size: item.size,
             quantity: item.quantity,
-            uploadDate
+            uploadDate,
+            source: item.source
           });
         }
       });
@@ -608,24 +716,67 @@
       localStorage.setItem("salesHistory", JSON.stringify(historyData));
       localStorage.setItem("latestProcessedData", JSON.stringify(latestProcessedData));
 
+      const sourceLabel = source === "daily" ? "Daily Orders" : "Amazon FBA";
       statusEl.textContent =
-        `${keptRows} rows saved, ${skippedRows} rows skipped. Sizes below 5x7 were ignored.`;
+        `${sourceLabel}: ${keptRows} rows saved, ${skippedRows} rows skipped. Sizes below 5x7 were ignored. Last file: ${fileName}`;
 
       renderDashboard();
+
+      if (source === "daily") {
+        dailyFileInput.value = "";
+      } else {
+        fbaFileInput.value = "";
+      }
     }
 
     function renderDashboard() {
       const selectedDate = uploadDateInput.value || today;
       const monthPrefix = selectedDate.slice(0, 7);
 
-      const dailyRows = historyData.filter(item => item.uploadDate === selectedDate);
-      const monthlyRows = historyData.filter(item => item.uploadDate.startsWith(monthPrefix));
+      const dailyOrdersDailyRows = historyData.filter(item =>
+        item.source === "daily" && item.uploadDate === selectedDate
+      );
+      const dailyOrdersMonthlyRows = historyData.filter(item =>
+        item.source === "daily" && item.uploadDate.startsWith(monthPrefix)
+      );
 
-      const dailyTotals = buildSizeTotals(dailyRows);
-      const monthlyTotals = buildSizeTotals(monthlyRows);
+      const fbaDailyRows = historyData.filter(item =>
+        item.source === "fba" && item.uploadDate === selectedDate
+      );
+      const fbaMonthlyRows = historyData.filter(item =>
+        item.source === "fba" && item.uploadDate.startsWith(monthPrefix)
+      );
 
-      renderSimpleTable(dailyTableWrap, dailyTotals, "SIZE", "QUANTITY");
-      renderSimpleTable(monthlyTableWrap, monthlyTotals, "SIZE", "QUANTITY");
+      renderSimpleTable(
+        dailyOrdersDailyWrap,
+        buildSizeTotals(dailyOrdersDailyRows),
+        "SIZE",
+        "QUANTITY"
+      );
+
+      renderSimpleTable(
+        dailyOrdersMonthlyWrap,
+        buildSizeTotals(dailyOrdersMonthlyRows),
+        "SIZE",
+        "QUANTITY"
+      );
+
+      renderSimpleTable(
+        fbaDailyWrap,
+        buildSizeTotals(fbaDailyRows),
+        "SIZE",
+        "QUANTITY"
+      );
+
+      renderSimpleTable(
+        fbaMonthlyWrap,
+        buildSizeTotals(fbaMonthlyRows),
+        "SIZE",
+        "QUANTITY"
+      );
+
+      dailySummary.textContent = buildSourceSummary("daily", selectedDate);
+      fbaSummary.textContent = buildSourceSummary("fba", selectedDate);
     }
 
     async function downloadExcel() {
@@ -683,12 +834,14 @@
         });
       });
 
+      const exportSource = latestProcessedData[0]?.source === "fba" ? "amazon_fba" : "daily_orders";
       const buffer = await workbook.xlsx.writeBuffer();
+
       saveAs(
         new Blob([buffer], {
           type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         }),
-        "excel_merge_output.xlsx"
+        `${exportSource}_output.xlsx`
       );
 
       statusEl.textContent = "Excel file exported.";
