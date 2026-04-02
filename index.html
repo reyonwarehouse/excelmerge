@@ -21,6 +21,9 @@
       --shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
       --radius: 22px;
       --radius-sm: 16px;
+      --danger-bg: #fff3f2;
+      --danger-text: #b42318;
+      --danger-line: rgba(180, 35, 24, 0.18);
     }
 
     * {
@@ -39,6 +42,10 @@
 
     body {
       padding: 28px 20px 40px;
+    }
+
+    .hidden {
+      display: none !important;
     }
 
     .container {
@@ -128,7 +135,7 @@
       font-size: 14px;
       font-weight: 600;
       letter-spacing: -0.01em;
-      transition: transform 0.15s ease, opacity 0.15s ease;
+      transition: transform 0.15s ease, opacity 0.15s ease, background 0.15s ease;
     }
 
     button:hover {
@@ -141,6 +148,18 @@
       color: #111;
     }
 
+    button.ghost {
+      background: white;
+      color: #111;
+      border: 1px solid var(--line);
+    }
+
+    button.danger {
+      background: var(--danger-bg);
+      color: var(--danger-text);
+      border: 1px solid var(--danger-line);
+    }
+
     .status {
       min-height: 20px;
       margin-top: 12px;
@@ -148,6 +167,53 @@
       font-size: 13px;
       padding-left: 2px;
       line-height: 1.5;
+    }
+
+    .manage-panel {
+      margin-top: 14px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(255,255,255,0.72);
+    }
+
+    .manage-title {
+      margin: 0 0 6px 0;
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .manage-subtitle {
+      margin: 0 0 14px 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .manage-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+    }
+
+    .manage-item {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px;
+      background: rgba(255,255,255,0.86);
+    }
+
+    .manage-item h4 {
+      margin: 0 0 6px 0;
+      font-size: 14px;
+    }
+
+    .manage-item p {
+      margin: 0 0 12px 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+      min-height: 34px;
     }
 
     .dashboard-grid {
@@ -336,7 +402,8 @@
 
     @media (max-width: 980px) {
       .dashboard-grid,
-      .top-actions-grid {
+      .top-actions-grid,
+      .manage-grid {
         grid-template-columns: 1fr;
       }
 
@@ -363,8 +430,36 @@
         <div class="top-actions-grid">
           <input type="date" id="uploadDate" />
           <button id="downloadBtn" type="button">Export Excel</button>
-          <button id="clearBtn" class="secondary" type="button">Clear Data</button>
+          <button id="manageBtn" class="secondary" type="button">Manage Data</button>
         </div>
+
+        <div id="managePanel" class="manage-panel hidden">
+          <h3 class="manage-title">Manage stored data</h3>
+          <p class="manage-subtitle">
+            These actions remove saved data from the dashboard. Use them carefully.
+          </p>
+
+          <div class="manage-grid">
+            <div class="manage-item">
+              <h4>Daily Orders</h4>
+              <p>Remove all saved Daily Orders records.</p>
+              <button id="removeDailyBtn" class="danger" type="button">Remove Daily Orders</button>
+            </div>
+
+            <div class="manage-item">
+              <h4>Amazon FBA</h4>
+              <p>Remove all saved Amazon FBA records.</p>
+              <button id="removeFbaBtn" class="danger" type="button">Remove Amazon FBA</button>
+            </div>
+
+            <div class="manage-item">
+              <h4>All Data</h4>
+              <p>Remove all saved records from both sections.</p>
+              <button id="removeAllBtn" class="danger" type="button">Remove All Data</button>
+            </div>
+          </div>
+        </div>
+
         <div class="status" id="status"></div>
       </div>
 
@@ -444,7 +539,11 @@
     const fbaFileInput = document.getElementById("fbaFileInput");
     const uploadDateInput = document.getElementById("uploadDate");
     const downloadBtn = document.getElementById("downloadBtn");
-    const clearBtn = document.getElementById("clearBtn");
+    const manageBtn = document.getElementById("manageBtn");
+    const managePanel = document.getElementById("managePanel");
+    const removeDailyBtn = document.getElementById("removeDailyBtn");
+    const removeFbaBtn = document.getElementById("removeFbaBtn");
+    const removeAllBtn = document.getElementById("removeAllBtn");
     const statusEl = document.getElementById("status");
 
     const dailyOrdersDailyWrap = document.getElementById("dailyOrdersDailyWrap");
@@ -466,8 +565,15 @@
     });
 
     downloadBtn.addEventListener("click", downloadExcel);
-    clearBtn.addEventListener("click", clearData);
+    manageBtn.addEventListener("click", toggleManagePanel);
+    removeDailyBtn.addEventListener("click", removeDailyData);
+    removeFbaBtn.addEventListener("click", removeFbaData);
+    removeAllBtn.addEventListener("click", removeAllData);
     uploadDateInput.addEventListener("change", renderDashboard);
+
+    function toggleManagePanel() {
+      managePanel.classList.toggle("hidden");
+    }
 
     function normalizeSku(value) {
       return String(value || "").trim();
@@ -578,7 +684,7 @@
       reader.onload = function(e) {
         try {
           const workbook = XLSX.read(e.target.result, { type: "binary" });
-          const firstSheet = workbook.Sheets[wb.SheetNames[0]];
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
           const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: "" });
           processData(rows, selectedDate, source, file.name);
         } catch (error) {
@@ -784,13 +890,49 @@
       statusEl.textContent = "Excel file exported.";
     }
 
-    function clearData() {
-      localStorage.removeItem("salesHistory");
-      localStorage.removeItem("latestProcessedData");
+    function removeDailyData() {
+      const ok = confirm("Remove all saved Daily Orders data?");
+      if (!ok) return;
+
+      historyData = historyData.filter(item => item.source !== "daily");
+      if (latestProcessedData.length && latestProcessedData[0]?.source === "daily") {
+        latestProcessedData = [];
+      }
+
+      saveState();
+      renderDashboard();
+      statusEl.textContent = "Daily Orders data removed.";
+    }
+
+    function removeFbaData() {
+      const ok = confirm("Remove all saved Amazon FBA data?");
+      if (!ok) return;
+
+      historyData = historyData.filter(item => item.source !== "fba");
+      if (latestProcessedData.length && latestProcessedData[0]?.source === "fba") {
+        latestProcessedData = [];
+      }
+
+      saveState();
+      renderDashboard();
+      statusEl.textContent = "Amazon FBA data removed.";
+    }
+
+    function removeAllData() {
+      const ok = confirm("Remove all saved data?");
+      if (!ok) return;
+
       historyData = [];
       latestProcessedData = [];
+
+      saveState();
       renderDashboard();
-      statusEl.textContent = "All data cleared.";
+      statusEl.textContent = "All data removed.";
+    }
+
+    function saveState() {
+      localStorage.setItem("salesHistory", JSON.stringify(historyData));
+      localStorage.setItem("latestProcessedData", JSON.stringify(latestProcessedData));
     }
 
     renderDashboard();
