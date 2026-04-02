@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sales Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0 }
+  :root {
+    --bg: #0d0d0d;
+    --surface: #141414;
+    --surface2: #1a1a1a;
+    --border: #242424;
+    --text: #e2ddd5;
+    --muted: #555;
+    --accent: #c8b48a;
+    --accent2: #6b8fa8;
+    --green: #5a9e6f;
+  }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Mono', 'Fira Mono', ui-monospace, monospace; font-size: 13px; min-height: 100vh; padding: 36px 20px 80px }
+  .wrap { max-width: 860px; margin: 0 auto }
+  header { display: flex; align-items: baseline; gap: 14px; margin-bottom: 32px; padding-bottom: 16px; border-bottom: 1px solid var(--border) }
+  .logo { font-size: 16px; font-weight: 700; letter-spacing: .06em; color: var(--accent) }
+  .logo-dot { color: var(--muted) }
+  .version { font-size: 10px; color: var(--muted); letter-spacing: .14em }
+
+  /* Upload */
+  #drop {
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    padding: 22px 28px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    cursor: pointer;
+    transition: border-color .18s, background .18s;
+    margin-bottom: 28px;
+    user-select: none;
+  }
+  #drop:hover, #drop.over { border-color: var(--accent); background: rgba(200,180,138,.04) }
+  #drop.busy { opacity: .5; pointer-events: none }
+  .upload-icon { width: 32px; height: 32px; border: 1px solid var(--border); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0 }
+  .upload-icon svg { width: 14px; height: 14px; stroke: var(--muted); fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round }
+  .upload-label { font-size: 12px; color: var(--muted) }
+  .upload-sub { font-size: 11px; color: #333; margin-top: 3px }
+  #msg { font-size: 11px; padding: 4px 10px; border-radius: 5px; display: none }
+  #msg.ok { background: rgba(90,158,111,.15); color: var(--green); display: inline-block }
+  #msg.err { background: rgba(190,80,80,.15); color: #c26060; display: inline-block }
+
+  /* Cards */
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px }
+  .card.hi { border-color: rgba(200,180,138,.25); background: rgba(200,180,138,.04) }
+  .card-lbl { font-size: 10px; color: var(--muted); letter-spacing: .12em; text-transform: uppercase; margin-bottom: 8px }
+  .card-val { font-size: 26px; font-weight: 700; letter-spacing: -.02em; color: var(--text) }
+  .card.hi .card-val { color: var(--accent) }
+
+  /* Sections */
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px }
+  .panel-title { font-size: 10px; color: var(--muted); letter-spacing: .12em; text-transform: uppercase; margin-bottom: 16px }
+
+  /* Bar chart */
+  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 9px }
+  .bar-lbl { font-size: 11px; color: var(--muted); width: 52px; flex-shrink: 0; text-align: right }
+  .bar-track { flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden }
+  .bar-fill { height: 100%; border-radius: 3px; transition: width .4s ease }
+  .bar-num { font-size: 11px; color: var(--text); width: 46px; flex-shrink: 0; text-align: right }
+
+  /* Table */
+  table { width: 100%; border-collapse: collapse }
+  thead tr { border-bottom: 1px solid var(--border) }
+  th { font-size: 10px; color: var(--muted); letter-spacing: .1em; text-transform: uppercase; text-align: left; padding: 0 6px 10px }
+  td { padding: 7px 6px; border-bottom: 1px solid rgba(255,255,255,.03); font-size: 12px }
+  tr:last-child td { border-bottom: none }
+  .rank { color: var(--muted); width: 24px }
+  .sku { color: var(--accent); }
+  .num { text-align: right; color: var(--text) }
+  .pct { text-align: right; font-size: 11px; color: var(--muted) }
+
+  .empty { color: #2e2e2e; font-size: 12px; padding: 28px 0; text-align: center }
+  .panel.full { grid-column: 1 / -1 }
+
+  /* Clear btn */
+  #clear-btn { display: none; margin-left: auto; font-size: 10px; color: var(--muted); background: none; border: 1px solid var(--border); border-radius: 5px; padding: 4px 10px; cursor: pointer; letter-spacing: .08em; text-transform: uppercase }
+  #clear-btn:hover { border-color: #c26060; color: #c26060 }
+  .header-row { display: flex; align-items: center; margin-bottom: 20px }
+
+  @media(max-width:580px) {
+    .cards { grid-template-columns: 1fr 1fr }
+    .grid2 { grid-template-columns: 1fr }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <span class="logo">◆<span class="logo-dot"> / </span>SALES</span>
+    <span class="version">Dashboard v1.0</span>
+  </header>
+
+  <div id="drop">
+    <div class="upload-icon">
+      <svg viewBox="0 0 16 16"><path d="M8 2v8M5 5l3-3 3 3"/><rect x="2" y="10" width="12" height="4" rx="1"/></svg>
+    </div>
+    <div>
+      <div class="upload-label">Excel dosyası yükle <span style="color:#333">(.xlsx / .xls)</span></div>
+      <div class="upload-sub">SKU + Quantity kolonları gerekli · Sürükle bırak veya tıkla</div>
+    </div>
+    <span id="msg"></span>
+  </div>
+  <input type="file" id="file-input" accept=".xlsx,.xls" style="display:none">
+
+  <div class="header-row">
+    <div></div>
+    <button id="clear-btn" onclick="clearData()">Verileri temizle</button>
+  </div>
+
+  <!-- Cards -->
+  <div class="cards">
+    <div class="card hi"><div class="card-lbl">Toplam Satış</div><div class="card-val" id="c-total">—</div></div>
+    <div class="card"><div class="card-lbl">Farklı SKU</div><div class="card-val" id="c-sku">—</div></div>
+    <div class="card"><div class="card-lbl">Farklı Size</div><div class="card-val" id="c-size">—</div></div>
+  </div>
+
+  <!-- Charts -->
+  <div class="grid2">
+    <div class="panel">
+      <div class="panel-title">Size Dağılımı</div>
+      <div id="size-chart"><div class="empty">Veri yok</div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Top 5 SKU</div>
+      <div id="top5-chart"><div class="empty">Veri yok</div></div>
+    </div>
+  </div>
+
+  <div class="panel full" style="margin-bottom:10px">
+    <div class="panel-title">En Çok Satan SKU'lar</div>
+    <div id="sku-table"><div class="empty">Veri yok</div></div>
+  </div>
+
+</div>
+
+<script>
+const KEY = 'sd_sales_v1'
+
+function parseSku(sku) {
+  const m = sku.match(/(\d+x\d+)$/i)
+  return m ? m[1].toLowerCase() : null
+}
+
+function mergeRows(rows) {
+  const m = {}
+  for (const r of rows) {
+    const sku = String(r.sku || '').trim()
+    const qty = parseInt(r.quantity || r.qty || 0, 10)
+    if (!sku || isNaN(qty) || qty <= 0) continue
+    const key = sku.toLowerCase()
+    if (m[key]) m[key].qty += qty
+    else m[key] = { sku, size: parseSku(sku), qty }
+  }
+  return Object.values(m)
+}
+
+function loadData() {
+  try { return JSON.parse(localStorage.getItem(KEY) || '[]') }
+  catch { return [] }
+}
+
+function saveData(rows) {
+  const existing = loadData()
+  const combined = mergeRows([...existing.map(r => ({ sku: r.sku, quantity: r.qty })), ...rows.map(r => ({ sku: r.sku, quantity: r.qty }))])
+  localStorage.setItem(KEY, JSON.stringify(combined))
+  return combined
+}
+
+function clearData() {
+  localStorage.removeItem(KEY)
+  renderDash([])
+  showMsg(null)
+}
+
+function fmt(n) { return n.toLocaleString('tr-TR') }
+
+function renderBar(container, items, colorVar) {
+  if (!items.length) { container.innerHTML = '<div class="empty">Veri yok</div>'; return }
+  const max = items[0].qty
+  container.innerHTML = items.map(it => `
+    <div class="bar-row">
+      <div class="bar-lbl">${it.label}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.round(it.qty/max*100)}%;background:${colorVar}"></div></div>
+      <div class="bar-num">${fmt(it.qty)}</div>
+    </div>`).join('')
+}
+
+function renderDash(data) {
+  const total = data.reduce((s, r) => s + r.qty, 0)
+  const sMap = {}, skuSorted = [...data].sort((a, b) => b.qty - a.qty)
+  for (const r of data) { const k = r.size || '—'; sMap[k] = (sMap[k] || 0) + r.qty }
+  const sizes = Object.entries(sMap).sort((a,b) => b[1]-a[1]).map(([label, qty]) => ({ label, qty }))
+
+  document.getElementById('c-total').textContent = fmt(total)
+  document.getElementById('c-sku').textContent = fmt(data.length)
+  document.getElementById('c-size').textContent = fmt(sizes.length)
+
+  renderBar(document.getElementById('size-chart'), sizes, 'var(--accent)')
+  renderBar(document.getElementById('top5-chart'), skuSorted.slice(0, 5).map(r => ({ label: r.sku.slice(-8), qty: r.qty })), 'var(--accent2)')
+
+  const tableEl = document.getElementById('sku-table')
+  if (!skuSorted.length) { tableEl.innerHTML = '<div class="empty">Veri yok</div>'; return }
+  tableEl.innerHTML = `
+    <table>
+      <thead><tr><th>#</th><th>SKU</th><th>Size</th><th style="text-align:right">Adet</th><th style="text-align:right">%</th></tr></thead>
+      <tbody>${skuSorted.slice(0, 20).map((r, i) => `
+        <tr>
+          <td class="rank">${i + 1}</td>
+          <td class="sku">${r.sku}</td>
+          <td style="color:var(--muted);font-size:11px">${r.size || '—'}</td>
+          <td class="num">${fmt(r.qty)}</td>
+          <td class="pct">${total ? Math.round(r.qty / total * 100) : 0}%</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`
+
+  document.getElementById('clear-btn').style.display = data.length ? 'block' : 'none'
+}
+
+function showMsg(type, text) {
+  const el = document.getElementById('msg')
+  if (!type) { el.style.display = 'none'; return }
+  el.className = type; el.textContent = text; el.style.display = 'inline-block'
+}
+
+function processFile(file) {
+  if (!file) return
+  const drop = document.getElementById('drop')
+  drop.classList.add('busy')
+  showMsg(null)
+  const reader = new FileReader()
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'array' })
+      const ws = wb.Sheets[wb.SheetNames[0]]
+      const raw = XLSX.utils.sheet_to_json(ws, { defval: '' })
+      const norm = raw.map(r => {
+        const lo = {}
+        for (const k of Object.keys(r)) lo[k.toLowerCase()] = r[k]
+        return { sku: lo['sku'] || lo['product'] || lo['item'] || '', quantity: lo['quantity'] || lo['qty'] || lo['amount'] || 0 }
+      })
+      const merged = mergeRows(norm)
+      if (!merged.length) { showMsg('err', 'Geçerli satır bulunamadı — SKU ve Quantity kolonları gerekli'); drop.classList.remove('busy'); return }
+      const all = saveData(merged)
+      renderDash(all)
+      showMsg('ok', `${merged.length} satır yüklendi · Toplam: ${all.length} SKU`)
+    } catch(err) {
+      showMsg('err', 'Dosya okunamadı: ' + err.message)
+    }
+    drop.classList.remove('busy')
+  }
+  reader.readAsArrayBuffer(file)
+}
+
+document.getElementById('drop').addEventListener('click', () => document.getElementById('file-input').click())
+document.getElementById('file-input').addEventListener('change', e => processFile(e.target.files[0]))
+document.getElementById('drop').addEventListener('dragover', e => { e.preventDefault(); e.currentTarget.classList.add('over') })
+document.getElementById('drop').addEventListener('dragleave', e => e.currentTarget.classList.remove('over'))
+document.getElementById('drop').addEventListener('drop', e => { e.preventDefault(); e.currentTarget.classList.remove('over'); processFile(e.dataTransfer.files[0]) })
+
+renderDash(loadData())
+</script>
+</body>
+</html>
