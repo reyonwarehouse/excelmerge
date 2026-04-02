@@ -1,9 +1,9 @@
+```html
 <!DOCTYPE html>
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
 <title>Excel Merge</title>
-
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
 <style>
@@ -13,21 +13,17 @@ body {
   margin: 0;
   padding: 20px;
 }
-
 .container {
   max-width: 1100px;
   margin: auto;
 }
-
 h1 {
   margin-bottom: 5px;
 }
-
 .subtitle {
   color: #666;
   margin-bottom: 20px;
 }
-
 .card {
   background: white;
   padding: 20px;
@@ -35,21 +31,25 @@ h1 {
   border: 1px solid #ddd;
   margin-bottom: 20px;
 }
-
+.toolbar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
 .kpi {
   display: flex;
   gap: 20px;
+  flex-wrap: wrap;
 }
-
 .kpi div {
   flex: 1;
+  min-width: 180px;
   text-align: center;
 }
-
 .kpi h2 {
   margin: 0;
 }
-
 button {
   padding: 10px 15px;
   cursor: pointer;
@@ -58,174 +58,210 @@ button {
   background: black;
   color: white;
 }
-
 button.secondary {
   background: #ccc;
   color: black;
 }
-
-input {
-  margin-right: 10px;
-}
-
 table {
   width: 100%;
   border-collapse: collapse;
 }
-
 th, td {
   padding: 10px;
   border-bottom: 1px solid #eee;
+  text-align: left;
+}
+#status {
+  margin-top: 12px;
+  color: #333;
 }
 </style>
 </head>
-
 <body>
 <div class="container">
 
-<h1>Excel Merge</h1>
-<div class="subtitle">Excel siparişlerini birleştir, analiz et, indir</div>
+  <h1>Excel Merge</h1>
+  <div class="subtitle">Excel siparişlerini birleştir, analiz et, indir</div>
 
-<div class="card">
-<input type="file" id="fileInput">
-<button onclick="downloadExcel()">Excel İndir</button>
-<button class="secondary" onclick="clearData()">Temizle</button>
-<p id="status"></p>
-</div>
+  <div class="card">
+    <div class="toolbar">
+      <input type="file" id="fileInput" accept=".xlsx,.xls" />
+      <button onclick="downloadExcel()">Excel İndir</button>
+      <button class="secondary" onclick="clearData()">Temizle</button>
+    </div>
+    <div id="status"></div>
+  </div>
 
-<div class="card kpi">
-<div>
-<h3>Toplam Satış</h3>
-<h2 id="totalSales">0</h2>
-</div>
-<div>
-<h3>Farklı SKU</h3>
-<h2 id="totalSku">0</h2>
-</div>
-<div>
-<h3>Farklı Size</h3>
-<h2 id="totalSize">0</h2>
-</div>
-</div>
+  <div class="card kpi">
+    <div>
+      <h3>Toplam Satış</h3>
+      <h2 id="totalSales">0</h2>
+    </div>
+    <div>
+      <h3>Farklı SKU</h3>
+      <h2 id="totalSku">0</h2>
+    </div>
+    <div>
+      <h3>Farklı Size</h3>
+      <h2 id="totalSize">0</h2>
+    </div>
+  </div>
 
-<div class="card">
-<h3>Top SKU</h3>
-<table id="skuTable"></table>
-</div>
+  <div class="card">
+    <h3>Top SKU</h3>
+    <table id="skuTable"></table>
+  </div>
 
 </div>
 
 <script>
 let data = JSON.parse(localStorage.getItem("salesData") || "[]");
-
 document.getElementById("fileInput").addEventListener("change", handleFile);
+
+function normalizeSku(value) {
+  return String(value || "").trim();
+}
+
+function extractSize(sku) {
+  const match = sku.match(/(\d+)\s*x\s*(\d+)/i);
+  if (!match) return null;
+  return {
+    text: `${Number(match[1])}x${Number(match[2])}`,
+    w: Number(match[1]),
+    h: Number(match[2])
+  };
+}
+
+function isAllowedSize(sizeObj) {
+  if (!sizeObj) return false;
+  if (sizeObj.w > 5) return true;
+  if (sizeObj.w === 5 && sizeObj.h >= 7) return true;
+  return false;
+}
+
+function sizeSortText(a, b) {
+  const sa = extractSize(a.size || "");
+  const sb = extractSize(b.size || "");
+  if (!sa && !sb) return 0;
+  if (!sa) return 1;
+  if (!sb) return -1;
+  return sa.w - sb.w || sa.h - sb.h;
+}
 
 function handleFile(e) {
   const file = e.target.files[0];
+  if (!file) return;
+
   const reader = new FileReader();
 
   reader.onload = function(evt) {
-    const wb = XLSX.read(evt.target.result, {type: "binary"});
+    const wb = XLSX.read(evt.target.result, { type: "binary" });
     const sheet = wb.Sheets[wb.SheetNames[0]];
-    const json = XLSX.utils.sheet_to_json(sheet);
-
+    const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
     processData(json);
-    document.getElementById("status").innerText = json.length + " satır işlendi";
   };
 
   reader.readAsBinaryString(file);
 }
 
-function parseSKU(sku) {
-  const match = sku.match(/(\d+)x(\d+)/i);
-
-  if (!match) return { clean: sku, size: null };
-
-  return {
-    clean: sku.replace(match[0], "").replace(/--/g,"").trim(),
-    size: match[1] + "x" + match[2]
-  };
-}
-
-function sizeSort(a, b) {
-  if (!a.size) return 1;
-  if (!b.size) return -1;
-
-  let [a1, a2] = a.size.split("x").map(Number);
-  let [b1, b2] = b.size.split("x").map(Number);
-
-  return a1 - b1 || a2 - b2;
-}
-
 function processData(rows) {
-  let map = {};
+  const map = {};
+  let keptRows = 0;
+  let skippedRows = 0;
 
-  rows.forEach(r => {
-    let skuRaw = r.SKU || r.sku || Object.values(r)[0];
-    let qty = Number(r.Quantity || r.quantity || Object.values(r)[1]);
+  rows.forEach((r) => {
+    const values = Object.values(r);
+    const skuRaw = normalizeSku(r.SKU || r.sku || values[0]);
+    const qtyRaw = r.Quantity || r.quantity || values[1];
+    const qty = Number(qtyRaw);
 
-    let parsed = parseSKU(skuRaw);
-    let key = parsed.clean + "_" + parsed.size;
+    if (!skuRaw || !Number.isFinite(qty) || qty <= 0) {
+      skippedRows++;
+      return;
+    }
+
+    const sizeObj = extractSize(skuRaw);
+
+    // 5x7'den küçük olanları alma
+    if (!isAllowedSize(sizeObj)) {
+      skippedRows++;
+      return;
+    }
+
+    const sizeText = sizeObj.text;
+
+    // SKU aynen korunuyor, size ayrıca analiz için tutuluyor
+    const key = skuRaw;
 
     if (!map[key]) {
       map[key] = {
-        sku: parsed.clean,
-        size: parsed.size,
+        sku: skuRaw,
+        size: sizeText,
         quantity: 0
       };
     }
 
     map[key].quantity += qty;
+    keptRows++;
   });
 
-  let newData = Object.values(map);
+  const newData = Object.values(map);
 
-  // eski data ile merge (duplicate önleme)
-  newData.forEach(n => {
-    let existing = data.find(d => d.sku === n.sku && d.size === n.size);
+  // Eski verilerle birleştir
+  newData.forEach((item) => {
+    const existing = data.find(d => d.sku === item.sku);
     if (existing) {
-      existing.quantity += n.quantity;
+      existing.quantity += item.quantity;
     } else {
-      data.push(n);
+      data.push(item);
     }
   });
 
   localStorage.setItem("salesData", JSON.stringify(data));
   render();
+
+  document.getElementById("status").innerText =
+    `${keptRows} satır alındı, ${skippedRows} satır atlandı. 5x7'den küçük ölçüler kaydedilmedi.`;
 }
 
 function render() {
-  let total = data.reduce((a,b)=>a+b.quantity,0);
+  const total = data.reduce((sum, item) => sum + item.quantity, 0);
   document.getElementById("totalSales").innerText = total;
   document.getElementById("totalSku").innerText = data.length;
 
-  let sizes = [...new Set(data.map(d=>d.size))];
+  const sizes = [...new Set(data.map(d => d.size).filter(Boolean))];
   document.getElementById("totalSize").innerText = sizes.length;
 
-  let sorted = [...data]
-    .sort((a,b)=>b.quantity-a.quantity)
-    .slice(0,10);
+  const sorted = [...data]
+    .sort((a, b) => b.quantity - a.quantity)
+    .slice(0, 10);
 
   let html = "<tr><th>SKU</th><th>Size</th><th>Adet</th></tr>";
-
-  sorted.forEach(d=>{
-    html += `<tr>
-      <td>${d.sku}</td>
-      <td>${d.size || ""}</td>
-      <td>${d.quantity}</td>
-    </tr>`;
+  sorted.forEach(d => {
+    html += `
+      <tr>
+        <td>${d.sku}</td>
+        <td>${d.size || ""}</td>
+        <td>${d.quantity}</td>
+      </tr>
+    `;
   });
 
   document.getElementById("skuTable").innerHTML = html;
 }
 
 function downloadExcel() {
-  let sorted = [...data].sort(sizeSort);
+  const exportData = [...data]
+    .sort((a, b) => sizeSortText(a, b))
+    .map(item => ({
+      sku: item.sku,         // SKU tam haliyle kalıyor
+      size: item.size,
+      quantity: item.quantity
+    }));
 
-  const ws = XLSX.utils.json_to_sheet(sorted);
+  const ws = XLSX.utils.json_to_sheet(exportData);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Sales");
-
   XLSX.writeFile(wb, "excel_merge_output.xlsx");
 }
 
@@ -238,6 +274,6 @@ function clearData() {
 
 render();
 </script>
-
 </body>
 </html>
+```
