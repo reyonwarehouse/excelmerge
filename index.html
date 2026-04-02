@@ -13,7 +13,7 @@
     :root {
       --bg: #f3f4f6;
       --surface: rgba(255, 255, 255, 0.82);
-      --surface-strong: rgba(255, 255, 255, 0.94);
+      --surface-strong: rgba(255, 255, 255, 0.96);
       --text: #111111;
       --muted: #6b7280;
       --line: rgba(17, 17, 17, 0.08);
@@ -21,7 +21,6 @@
       --shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
       --radius: 22px;
       --radius-sm: 16px;
-      --accent: #111111;
     }
 
     * {
@@ -42,10 +41,6 @@
       padding: 28px 20px 40px;
     }
 
-    .hidden {
-      display: none !important;
-    }
-
     .container {
       max-width: 1160px;
       margin: 0 auto;
@@ -59,15 +54,8 @@
     .hero-top {
       display: flex;
       align-items: center;
-      justify-content: space-between;
       gap: 12px;
       margin-bottom: 8px;
-    }
-
-    .hero-left {
-      display: flex;
-      align-items: center;
-      gap: 12px;
     }
 
     .hero-icon {
@@ -112,16 +100,61 @@
       margin-bottom: 18px;
     }
 
-    .toolbar {
+    .upload-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr 170px auto auto;
-      gap: 12px;
-      align-items: center;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 14px;
     }
 
-    input[type="file"],
-    input[type="date"],
-    input[type="password"] {
+    .upload-box {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(255,255,255,0.64);
+      padding: 16px;
+    }
+
+    .upload-box.daily {
+      background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(255,255,255,0.70));
+    }
+
+    .upload-box.fba {
+      background: linear-gradient(180deg, rgba(250,250,250,0.98), rgba(245,245,245,0.74));
+    }
+
+    .upload-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .upload-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(17,17,17,0.06);
+      font-size: 14px;
+    }
+
+    .upload-title {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    .upload-subtitle {
+      margin: 0 0 12px 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .upload-box input[type="file"] {
       width: 100%;
       padding: 13px 14px;
       border-radius: 14px;
@@ -132,7 +165,7 @@
       font-size: 14px;
     }
 
-    input[type="file"]::file-selector-button {
+    .upload-box input[type="file"]::file-selector-button {
       border: none;
       background: #111;
       color: white;
@@ -140,6 +173,24 @@
       border-radius: 10px;
       margin-right: 12px;
       cursor: pointer;
+    }
+
+    .action-row {
+      display: grid;
+      grid-template-columns: 170px auto auto;
+      gap: 12px;
+      align-items: center;
+    }
+
+    input[type="date"] {
+      width: 100%;
+      padding: 13px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: var(--surface-strong);
+      color: var(--text);
+      outline: none;
+      font-size: 14px;
     }
 
     button {
@@ -290,57 +341,11 @@
       line-height: 1.5;
     }
 
-    .login-wrap {
-      min-height: calc(100vh - 56px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .login-card {
-      width: 100%;
-      max-width: 420px;
-      padding: 28px;
-    }
-
-    .login-title {
-      margin: 0 0 8px 0;
-      font-size: 28px;
-      font-weight: 650;
-      letter-spacing: -0.03em;
-    }
-
-    .login-subtitle {
-      margin: 0 0 18px 0;
-      color: var(--muted);
-      font-size: 14px;
-      line-height: 1.5;
-    }
-
-    .login-actions {
-      display: grid;
-      gap: 12px;
-    }
-
-    .error {
-      color: #b42318;
-      font-size: 13px;
-      min-height: 18px;
-      margin-top: 10px;
-    }
-
     @media (max-width: 980px) {
-      .toolbar {
+      .upload-grid,
+      .dashboard-grid,
+      .action-row {
         grid-template-columns: 1fr;
-      }
-
-      .dashboard-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .hero-top {
-        flex-direction: column;
-        align-items: flex-start;
       }
 
       h1 {
@@ -350,32 +355,12 @@
   </style>
 </head>
 <body>
-  <div id="loginScreen" class="login-wrap">
-    <div class="panel login-card">
-      <div class="hero-left" style="margin-bottom:14px;">
-        <div class="hero-icon">✦</div>
-        <div>
-          <h2 class="login-title">Excel Merge</h2>
-        </div>
-      </div>
-      <p class="login-subtitle">Enter the password to access the dashboard.</p>
-      <div class="login-actions">
-        <input type="password" id="passwordInput" placeholder="Password" />
-        <button id="loginBtn" type="button">Enter</button>
-      </div>
-      <div id="loginError" class="error"></div>
-    </div>
-  </div>
-
-  <div id="appScreen" class="hidden">
+  <div id="appScreen">
     <div class="container">
       <div class="hero">
         <div class="hero-top">
-          <div class="hero-left">
-            <div class="hero-icon">✦</div>
-            <h1>Excel Merge</h1>
-          </div>
-          <button id="logoutBtn" class="secondary" type="button">Log Out</button>
+          <div class="hero-icon">✦</div>
+          <h1>Excel Merge</h1>
         </div>
         <p class="subtitle">
           Upload daily order files or Amazon FBA files, keep them separate, review size-based totals, and export the latest processed file as a clean Excel sheet.
@@ -383,13 +368,36 @@
       </div>
 
       <div class="panel toolbar-card">
-        <div class="toolbar">
-          <input type="file" id="dailyFileInput" accept=".xlsx,.xls" />
-          <input type="file" id="fbaFileInput" accept=".xlsx,.xls" />
+        <div class="upload-grid">
+          <div class="upload-box daily">
+            <div class="upload-head">
+              <div class="upload-icon">◌</div>
+              <h3 class="upload-title">Daily Orders Upload</h3>
+            </div>
+            <p class="upload-subtitle">
+              Use this area for regular daily warehouse order files.
+            </p>
+            <input type="file" id="dailyFileInput" accept=".xlsx,.xls" />
+          </div>
+
+          <div class="upload-box fba">
+            <div class="upload-head">
+              <div class="upload-icon">↗</div>
+              <h3 class="upload-title">Amazon FBA Upload</h3>
+            </div>
+            <p class="upload-subtitle">
+              Use this area only for Amazon FBA order files.
+            </p>
+            <input type="file" id="fbaFileInput" accept=".xlsx,.xls" />
+          </div>
+        </div>
+
+        <div class="action-row">
           <input type="date" id="uploadDate" />
           <button id="downloadBtn" type="button">Export Excel</button>
           <button id="clearBtn" class="secondary" type="button">Clear Data</button>
         </div>
+
         <div class="status" id="status"></div>
       </div>
 
@@ -440,18 +448,8 @@
   </div>
 
   <script>
-    const APP_PASSWORD = "Reyon2026!";
-    const AUTH_KEY = "excelMergeAuth";
-
     let historyData = JSON.parse(localStorage.getItem("salesHistory") || "[]");
     let latestProcessedData = JSON.parse(localStorage.getItem("latestProcessedData") || "[]");
-
-    const loginScreen = document.getElementById("loginScreen");
-    const appScreen = document.getElementById("appScreen");
-    const passwordInput = document.getElementById("passwordInput");
-    const loginBtn = document.getElementById("loginBtn");
-    const loginError = document.getElementById("loginError");
-    const logoutBtn = document.getElementById("logoutBtn");
 
     const dailyFileInput = document.getElementById("dailyFileInput");
     const fbaFileInput = document.getElementById("fbaFileInput");
@@ -470,12 +468,6 @@
     const today = new Date().toISOString().slice(0, 10);
     uploadDateInput.value = today;
 
-    loginBtn.addEventListener("click", handleLogin);
-    passwordInput.addEventListener("keydown", function(e) {
-      if (e.key === "Enter") handleLogin();
-    });
-    logoutBtn.addEventListener("click", handleLogout);
-
     dailyFileInput.addEventListener("change", function(e) {
       handleFile(e, "daily");
     });
@@ -487,43 +479,6 @@
     downloadBtn.addEventListener("click", downloadExcel);
     clearBtn.addEventListener("click", clearData);
     uploadDateInput.addEventListener("change", renderDashboard);
-
-    function handleLogin() {
-      const entered = passwordInput.value;
-      if (entered === APP_PASSWORD) {
-        localStorage.setItem(AUTH_KEY, "true");
-        showApp();
-        passwordInput.value = "";
-        loginError.textContent = "";
-      } else {
-        loginError.textContent = "Wrong password.";
-      }
-    }
-
-    function handleLogout() {
-      localStorage.removeItem(AUTH_KEY);
-      showLogin();
-    }
-
-    function showApp() {
-      loginScreen.classList.add("hidden");
-      appScreen.classList.remove("hidden");
-      renderDashboard();
-    }
-
-    function showLogin() {
-      appScreen.classList.add("hidden");
-      loginScreen.classList.remove("hidden");
-    }
-
-    function checkAuth() {
-      const isAuthed = localStorage.getItem(AUTH_KEY) === "true";
-      if (isAuthed) {
-        showApp();
-      } else {
-        showLogin();
-      }
-    }
 
     function normalizeSku(value) {
       return String(value || "").trim();
@@ -820,17 +775,10 @@
             bold: rowNumber === 1
           };
 
-          if (rowNumber === 1) {
-            cell.alignment = {
-              vertical: "middle",
-              horizontal: "center"
-            };
-          } else {
-            cell.alignment = {
-              vertical: "middle",
-              horizontal: colNumber === 1 ? "left" : "center"
-            };
-          }
+          cell.alignment = {
+            vertical: "middle",
+            horizontal: rowNumber === 1 ? "center" : (colNumber === 1 ? "left" : "center")
+          };
         });
       });
 
@@ -856,7 +804,7 @@
       statusEl.textContent = "All data cleared.";
     }
 
-    checkAuth();
+    renderDashboard();
   </script>
 </body>
 </html>
