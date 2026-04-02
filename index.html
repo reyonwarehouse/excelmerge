@@ -20,7 +20,6 @@
       --line-soft: rgba(17, 17, 17, 0.05);
       --shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
       --radius: 22px;
-      --radius-sm: 14px;
     }
 
     * {
@@ -41,6 +40,10 @@
       padding: 28px 20px 40px;
     }
 
+    .hidden {
+      display: none !important;
+    }
+
     .container {
       max-width: 980px;
       margin: 0 auto;
@@ -54,8 +57,15 @@
     .hero-top {
       display: flex;
       align-items: center;
+      justify-content: space-between;
       gap: 12px;
       margin-bottom: 8px;
+    }
+
+    .hero-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
 
     .hero-icon {
@@ -108,7 +118,8 @@
     }
 
     input[type="file"],
-    input[type="date"] {
+    input[type="date"],
+    input[type="password"] {
       width: 100%;
       padding: 13px 14px;
       border-radius: 14px;
@@ -239,6 +250,45 @@
       line-height: 1.5;
     }
 
+    .login-wrap {
+      min-height: calc(100vh - 56px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 420px;
+      padding: 28px;
+    }
+
+    .login-title {
+      margin: 0 0 8px 0;
+      font-size: 28px;
+      font-weight: 650;
+      letter-spacing: -0.03em;
+    }
+
+    .login-subtitle {
+      margin: 0 0 18px 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .login-actions {
+      display: grid;
+      gap: 12px;
+    }
+
+    .error {
+      color: #b42318;
+      font-size: 13px;
+      min-height: 18px;
+      margin-top: 10px;
+    }
+
     @media (max-width: 860px) {
       .toolbar {
         grid-template-columns: 1fr;
@@ -251,49 +301,88 @@
       h1 {
         font-size: 27px;
       }
+
+      .hero-top {
+        flex-direction: column;
+        align-items: flex-start;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="hero">
-      <div class="hero-top">
+  <div id="loginScreen" class="login-wrap">
+    <div class="panel login-card">
+      <div class="hero-left" style="margin-bottom:14px;">
         <div class="hero-icon">✦</div>
-        <h1>Excel Merge</h1>
+        <div>
+          <h2 class="login-title">Excel Merge</h2>
+        </div>
       </div>
-      <p class="subtitle">
-        Upload a daily order file, merge matching SKUs, ignore sizes below 5x7, review size-based totals, and export a clean Excel output.
+      <p class="login-subtitle">
+        Enter the password to access the dashboard.
       </p>
-    </div>
-
-    <div class="panel toolbar-card">
-      <div class="toolbar">
-        <input type="file" id="fileInput" accept=".xlsx,.xls" />
-        <input type="date" id="uploadDate" />
-        <button id="downloadBtn" type="button">Export Excel</button>
-        <button id="clearBtn" class="secondary" type="button">Clear Data</button>
+      <div class="login-actions">
+        <input type="password" id="passwordInput" placeholder="Password" />
+        <button id="loginBtn" type="button">Enter</button>
       </div>
-      <div class="status" id="status"></div>
+      <div id="loginError" class="error"></div>
     </div>
+  </div>
 
-    <div class="stats-grid">
-      <div class="panel stat-card">
-        <h2 class="section-title"><span class="mini-icon">◌</span>Daily size totals</h2>
-        <div id="dailyTableWrap"></div>
-        <div class="footer-note">Totals for the selected upload date.</div>
+  <div id="appScreen" class="hidden">
+    <div class="container">
+      <div class="hero">
+        <div class="hero-top">
+          <div class="hero-left">
+            <div class="hero-icon">✦</div>
+            <h1>Excel Merge</h1>
+          </div>
+          <button id="logoutBtn" class="secondary" type="button">Log Out</button>
+        </div>
+        <p class="subtitle">
+          Upload a daily order file, merge matching SKUs, ignore sizes below 5x7, review size-based totals, and export a clean Excel output.
+        </p>
       </div>
 
-      <div class="panel stat-card">
-        <h2 class="section-title"><span class="mini-icon">↗</span>Month-to-date size totals</h2>
-        <div id="monthlyTableWrap"></div>
-        <div class="footer-note">Running totals for the selected month.</div>
+      <div class="panel toolbar-card">
+        <div class="toolbar">
+          <input type="file" id="fileInput" accept=".xlsx,.xls" />
+          <input type="date" id="uploadDate" />
+          <button id="downloadBtn" type="button">Export Excel</button>
+          <button id="clearBtn" class="secondary" type="button">Clear Data</button>
+        </div>
+        <div class="status" id="status"></div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="panel stat-card">
+          <h2 class="section-title"><span class="mini-icon">◌</span>Daily size totals</h2>
+          <div id="dailyTableWrap"></div>
+          <div class="footer-note">Totals for the selected upload date.</div>
+        </div>
+
+        <div class="panel stat-card">
+          <h2 class="section-title"><span class="mini-icon">↗</span>Month-to-date size totals</h2>
+          <div id="monthlyTableWrap"></div>
+          <div class="footer-note">Running totals for the selected month.</div>
+        </div>
       </div>
     </div>
   </div>
 
   <script>
+    const APP_PASSWORD = "Reyon2026!";
+    const AUTH_KEY = "excelMergeAuth";
+
     let historyData = JSON.parse(localStorage.getItem("salesHistory") || "[]");
     let latestProcessedData = JSON.parse(localStorage.getItem("latestProcessedData") || "[]");
+
+    const loginScreen = document.getElementById("loginScreen");
+    const appScreen = document.getElementById("appScreen");
+    const passwordInput = document.getElementById("passwordInput");
+    const loginBtn = document.getElementById("loginBtn");
+    const loginError = document.getElementById("loginError");
+    const logoutBtn = document.getElementById("logoutBtn");
 
     const fileInput = document.getElementById("fileInput");
     const uploadDateInput = document.getElementById("uploadDate");
@@ -306,10 +395,53 @@
     const today = new Date().toISOString().slice(0, 10);
     uploadDateInput.value = today;
 
+    loginBtn.addEventListener("click", handleLogin);
+    passwordInput.addEventListener("keydown", function(e) {
+      if (e.key === "Enter") handleLogin();
+    });
+    logoutBtn.addEventListener("click", handleLogout);
+
     fileInput.addEventListener("change", handleFile);
     downloadBtn.addEventListener("click", downloadExcel);
     clearBtn.addEventListener("click", clearData);
     uploadDateInput.addEventListener("change", renderDashboard);
+
+    function handleLogin() {
+      const entered = passwordInput.value;
+      if (entered === APP_PASSWORD) {
+        localStorage.setItem(AUTH_KEY, "true");
+        showApp();
+        passwordInput.value = "";
+        loginError.textContent = "";
+      } else {
+        loginError.textContent = "Wrong password.";
+      }
+    }
+
+    function handleLogout() {
+      localStorage.removeItem(AUTH_KEY);
+      showLogin();
+    }
+
+    function showApp() {
+      loginScreen.classList.add("hidden");
+      appScreen.classList.remove("hidden");
+      renderDashboard();
+    }
+
+    function showLogin() {
+      appScreen.classList.add("hidden");
+      loginScreen.classList.remove("hidden");
+    }
+
+    function checkAuth() {
+      const isAuthed = localStorage.getItem(AUTH_KEY) === "true";
+      if (isAuthed) {
+        showApp();
+      } else {
+        showLogin();
+      }
+    }
 
     function normalizeSku(value) {
       return String(value || "").trim();
@@ -547,7 +679,7 @@
               vertical: "middle",
               horizontal: colNumber === 1 ? "left" : "center"
             };
-          };
+          }
         });
       });
 
@@ -571,7 +703,7 @@
       statusEl.textContent = "All data cleared.";
     }
 
-    renderDashboard();
+    checkAuth();
   </script>
 </body>
 </html>
