@@ -148,12 +148,6 @@
       color: #111;
     }
 
-    button.ghost {
-      background: white;
-      color: #111;
-      border: 1px solid var(--line);
-    }
-
     button.danger {
       background: var(--danger-bg);
       color: var(--danger-text);
@@ -688,7 +682,7 @@
           const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: "" });
           processData(rows, selectedDate, source, file.name);
         } catch (error) {
-          console.error(error);
+          console.error("Read error:", error);
           statusEl.textContent = "Could not read the file.";
         }
       };
@@ -763,8 +757,7 @@
         }
       });
 
-      localStorage.setItem("salesHistory", JSON.stringify(historyData));
-      localStorage.setItem("latestProcessedData", JSON.stringify(latestProcessedData));
+      saveState();
 
       const sourceLabel = source === "daily" ? "Daily Orders" : "Amazon FBA";
       statusEl.textContent =
@@ -830,64 +823,89 @@
     }
 
     async function downloadExcel() {
-      if (!latestProcessedData.length) {
-        statusEl.textContent = "No processed data to export.";
-        return;
+      try {
+        if (!latestProcessedData || !latestProcessedData.length) {
+          statusEl.textContent = "No processed data to export.";
+          return;
+        }
+
+        if (typeof ExcelJS === "undefined") {
+          statusEl.textContent = "Excel export library is not loaded.";
+          return;
+        }
+
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet("Sales");
+
+        const longestSkuLength = Math.max(
+          3,
+          ...latestProcessedData.map(item => String(item.sku || "").length)
+        );
+
+        worksheet.columns = [
+          { header: "SKU", key: "sku", width: longestSkuLength + 2 },
+          { header: "QUANTITY", key: "quantity", width: 14 }
+        ];
+
+        latestProcessedData.forEach(item => {
+          worksheet.addRow({
+            sku: item.sku,
+            quantity: item.quantity
+          });
+        });
+
+        worksheet.eachRow((row, rowNumber) => {
+          row.eachCell((cell, colNumber) => {
+            cell.border = {
+              top: { style: "thin" },
+              left: { style: "thin" },
+              bottom: { style: "thin" },
+              right: { style: "thin" }
+            };
+
+            cell.font = {
+              name: "Calibri",
+              size: 11,
+              bold: rowNumber === 1
+            };
+
+            cell.alignment = {
+              vertical: "middle",
+              horizontal: rowNumber === 1 ? "center" : (colNumber === 1 ? "left" : "center")
+            };
+          });
+        });
+
+        const buffer = await workbook.xlsx.writeBuffer();
+
+        const exportSource =
+          latestProcessedData[0] && latestProcessedData[0].source === "fba"
+            ? "amazon_fba"
+            : "daily_orders";
+
+        const blob = new Blob(
+          [buffer],
+          { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }
+        );
+
+        if (typeof saveAs === "function") {
+          saveAs(blob, `${exportSource}_output.xlsx`);
+        } else {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `${exportSource}_output.xlsx`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+        }
+
+        statusEl.textContent = "Excel file exported.";
+      } catch (error) {
+        console.error("Export error:", error);
+        statusEl.textContent = "Export failed. Please try again.";
       }
-
-      const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet("Sales");
-
-      const longestSkuLength = Math.max(
-        "SKU".length,
-        ...latestProcessedData.map(item => String(item.sku || "").length)
-      );
-
-      worksheet.columns = [
-        { header: "SKU", key: "sku", width: longestSkuLength + 2 },
-        { header: "QUANTITY", key: "quantity", width: 14 }
-      ];
-
-      latestProcessedData.forEach(item => {
-        worksheet.addRow({
-          sku: item.sku,
-          quantity: item.quantity
-        });
-      });
-
-      worksheet.eachRow((row, rowNumber) => {
-        row.eachCell((cell, colNumber) => {
-          cell.border = {
-            top: { style: "thin" },
-            left: { style: "thin" },
-            bottom: { style: "thin" },
-            right: { style: "thin" }
-          };
-
-          cell.font = {
-            name: "Calibri",
-            size: 11,
-            bold: rowNumber === 1
-          };
-
-          cell.alignment = {
-            vertical: "middle",
-            horizontal: rowNumber === 1 ? "center" : (colNumber === 1 ? "left" : "center")
-          };
-        });
-      });
-
-      const exportSource = latestProcessedData[0]?.source === "fba" ? "amazon_fba" : "daily_orders";
-      const buffer = await workbook.xlsx.writeBuffer();
-
-      saveAs(
-        new Blob([buffer], {
-          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        }),
-        `${exportSource}_output.xlsx`
-      );
-
-      statusEl.textContent = "Excel file exported.";
     }
 
     function removeDailyData() {
