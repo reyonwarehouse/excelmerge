@@ -11,19 +11,19 @@
 
   <style>
     :root {
-      --bg: #f3f4f6;
-      --surface: rgba(255, 255, 255, 0.82);
-      --surface-strong: rgba(255, 255, 255, 0.96);
-      --text: #111111;
-      --muted: #6b7280;
-      --line: rgba(17, 17, 17, 0.08);
-      --line-soft: rgba(17, 17, 17, 0.05);
-      --shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
-      --radius: 22px;
+      --bg: #262626;
+      --panel: #2f2f2f;
+      --panel-2: #343434;
+      --panel-3: #3a3a3a;
+      --text: #f5f5f5;
+      --muted: #b3b3b3;
+      --line: rgba(255,255,255,0.08);
+      --line-soft: rgba(255,255,255,0.05);
+      --shadow: 0 14px 32px rgba(0, 0, 0, 0.24);
+      --radius: 24px;
       --radius-sm: 16px;
-      --danger-bg: #fff3f2;
-      --danger-text: #b42318;
-      --danger-line: rgba(180, 35, 24, 0.18);
+      --accent: #ffffff;
+      --danger: #ffb4b4;
     }
 
     * {
@@ -33,15 +33,13 @@
     html, body {
       margin: 0;
       padding: 0;
-      background:
-        radial-gradient(circle at top left, rgba(255,255,255,0.9), transparent 32%),
-        linear-gradient(180deg, #f7f7f8 0%, #f2f3f5 100%);
+      background: var(--bg);
       color: var(--text);
       font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
     }
 
     body {
-      padding: 28px 20px 40px;
+      padding: 28px 20px 42px;
     }
 
     .hidden {
@@ -49,80 +47,131 @@
     }
 
     .container {
-      max-width: 1160px;
+      max-width: 1120px;
       margin: 0 auto;
     }
 
     .hero {
-      margin-bottom: 22px;
-      padding: 8px 4px;
+      text-align: center;
+      margin-bottom: 28px;
     }
 
-    .hero-top {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 8px;
-    }
-
-    .hero-icon {
-      width: 46px;
-      height: 46px;
-      border-radius: 16px;
+    .hero-mark {
+      width: 56px;
+      height: 56px;
+      margin: 0 auto 14px;
+      border-radius: 18px;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: rgba(255,255,255,0.78);
-      border: 1px solid rgba(255,255,255,0.8);
+      background: #313131;
+      border: 1px solid var(--line);
       box-shadow: var(--shadow);
-      font-size: 18px;
-      backdrop-filter: blur(14px);
+      font-size: 20px;
     }
 
     h1 {
-      margin: 0;
-      font-size: 31px;
+      margin: 0 0 8px 0;
+      font-size: 34px;
       font-weight: 650;
-      letter-spacing: -0.03em;
+      letter-spacing: -0.04em;
     }
 
     .subtitle {
-      margin: 0;
+      margin: 0 auto;
+      max-width: 640px;
       color: var(--muted);
       font-size: 14px;
-      line-height: 1.6;
-      max-width: 760px;
+      line-height: 1.65;
     }
 
     .panel {
-      background: var(--surface);
-      border: 1px solid rgba(255,255,255,0.72);
-      box-shadow: var(--shadow);
+      background: var(--panel);
+      border: 1px solid var(--line);
       border-radius: var(--radius);
-      backdrop-filter: blur(18px);
+      box-shadow: var(--shadow);
     }
 
-    .top-actions {
-      padding: 18px;
+    .main-upload {
+      padding: 24px;
       margin-bottom: 18px;
     }
 
-    .top-actions-grid {
+    .upload-stack {
       display: grid;
-      grid-template-columns: 170px auto auto;
-      gap: 12px;
-      align-items: center;
+      gap: 14px;
+      max-width: 820px;
+      margin: 0 auto;
     }
 
+    .upload-card {
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 18px;
+    }
+
+    .upload-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .upload-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,255,255,0.07);
+      font-size: 14px;
+    }
+
+    .upload-title {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    .upload-subtitle {
+      margin: 0 0 12px 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    input[type="file"],
     input[type="date"] {
       width: 100%;
       padding: 13px 14px;
       border-radius: 14px;
       border: 1px solid var(--line);
-      background: var(--surface-strong);
+      background: var(--panel-3);
       color: var(--text);
       outline: none;
       font-size: 14px;
+    }
+
+    input[type="file"]::file-selector-button {
+      border: none;
+      background: #f5f5f5;
+      color: #111;
+      padding: 9px 12px;
+      border-radius: 10px;
+      margin-right: 12px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .action-row {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 6px;
     }
 
     button {
@@ -130,8 +179,8 @@
       border-radius: 14px;
       padding: 13px 16px;
       cursor: pointer;
-      background: #111;
-      color: white;
+      background: #f5f5f5;
+      color: #111;
       font-size: 14px;
       font-weight: 600;
       letter-spacing: -0.01em;
@@ -144,31 +193,49 @@
     }
 
     button.secondary {
-      background: rgba(17, 17, 17, 0.06);
-      color: #111;
+      background: rgba(255,255,255,0.08);
+      color: var(--text);
+      border: 1px solid var(--line);
     }
 
     button.danger {
-      background: var(--danger-bg);
-      color: var(--danger-text);
-      border: 1px solid var(--danger-line);
+      background: rgba(255, 180, 180, 0.08);
+      color: var(--danger);
+      border: 1px solid rgba(255, 180, 180, 0.12);
     }
 
     .status {
       min-height: 20px;
-      margin-top: 12px;
+      margin-top: 14px;
+      text-align: center;
       color: var(--muted);
       font-size: 13px;
-      padding-left: 2px;
       line-height: 1.5;
     }
 
+    .topbar {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+
+    .date-wrap {
+      min-width: 180px;
+      max-width: 220px;
+    }
+
     .manage-panel {
-      margin-top: 14px;
+      margin-top: 16px;
       padding: 16px;
       border: 1px solid var(--line);
       border-radius: 18px;
-      background: rgba(255,255,255,0.72);
+      background: #313131;
+      max-width: 820px;
+      margin-left: auto;
+      margin-right: auto;
     }
 
     .manage-title {
@@ -194,7 +261,7 @@
       border: 1px solid var(--line);
       border-radius: 16px;
       padding: 14px;
-      background: rgba(255,255,255,0.86);
+      background: #373737;
     }
 
     .manage-item h4 {
@@ -210,14 +277,22 @@
       min-height: 34px;
     }
 
-    .dashboard-grid {
+    .stats-panel {
+      padding: 20px;
+      margin-top: 18px;
+    }
+
+    .stats-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr 1fr 1fr;
       gap: 18px;
     }
 
     .source-card {
-      padding: 20px;
+      background: #303030;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 18px;
     }
 
     .source-header {
@@ -225,7 +300,7 @@
       align-items: center;
       justify-content: space-between;
       gap: 10px;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
     }
 
     .source-title {
@@ -233,29 +308,29 @@
       align-items: center;
       gap: 10px;
       margin: 0;
-      font-size: 18px;
+      font-size: 17px;
       font-weight: 600;
       letter-spacing: -0.02em;
     }
 
     .mini-icon {
-      width: 32px;
-      height: 32px;
+      width: 30px;
+      height: 30px;
       border-radius: 10px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      background: rgba(17,17,17,0.05);
-      color: #111;
-      font-size: 14px;
+      background: rgba(255,255,255,0.07);
+      color: var(--text);
+      font-size: 13px;
     }
 
     .pill {
       padding: 7px 10px;
       border-radius: 999px;
       font-size: 12px;
-      color: #111;
-      background: rgba(17,17,17,0.05);
+      color: var(--text);
+      background: rgba(255,255,255,0.07);
       white-space: nowrap;
     }
 
@@ -264,86 +339,18 @@
       gap: 14px;
     }
 
-    .upload-box {
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      background: rgba(255,255,255,0.64);
-      padding: 16px;
-    }
-
-    .upload-box.daily {
-      background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(255,255,255,0.70));
-    }
-
-    .upload-box.fba {
-      background: linear-gradient(180deg, rgba(250,250,250,0.98), rgba(245,245,245,0.74));
-    }
-
-    .upload-head {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 8px;
-    }
-
-    .upload-icon {
-      width: 32px;
-      height: 32px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(17,17,17,0.06);
-      font-size: 14px;
-    }
-
-    .upload-title {
-      margin: 0;
-      font-size: 15px;
-      font-weight: 600;
-      letter-spacing: -0.01em;
-    }
-
-    .upload-subtitle {
-      margin: 0 0 12px 0;
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.5;
-    }
-
-    .upload-box input[type="file"] {
-      width: 100%;
-      padding: 13px 14px;
-      border-radius: 14px;
-      border: 1px solid var(--line);
-      background: var(--surface-strong);
-      color: var(--text);
-      outline: none;
-      font-size: 14px;
-    }
-
-    .upload-box input[type="file"]::file-selector-button {
-      border: none;
-      background: #111;
-      color: white;
-      padding: 9px 12px;
-      border-radius: 10px;
-      margin-right: 12px;
-      cursor: pointer;
-    }
-
     .sub-card {
       border: 1px solid var(--line-soft);
       border-radius: var(--radius-sm);
-      background: rgba(255,255,255,0.68);
-      padding: 16px;
+      background: #383838;
+      padding: 14px;
     }
 
     .sub-title {
-      margin: 0 0 12px 0;
-      font-size: 14px;
+      margin: 0 0 10px 0;
+      font-size: 13px;
       font-weight: 600;
-      color: #111;
+      color: var(--text);
       letter-spacing: -0.01em;
     }
 
@@ -351,7 +358,7 @@
       overflow: hidden;
       border-radius: 14px;
       border: 1px solid var(--line-soft);
-      background: rgba(255,255,255,0.72);
+      background: #3a3a3a;
     }
 
     table {
@@ -360,13 +367,13 @@
     }
 
     th, td {
-      padding: 12px 14px;
-      font-size: 14px;
+      padding: 11px 12px;
+      font-size: 13px;
     }
 
     th {
-      background: rgba(17,17,17,0.03);
-      color: #111;
+      background: rgba(255,255,255,0.04);
+      color: var(--text);
       font-weight: 600;
       text-align: left;
       border-bottom: 1px solid var(--line);
@@ -374,7 +381,7 @@
 
     td {
       border-bottom: 1px solid var(--line-soft);
-      color: #1f2937;
+      color: #ebebeb;
     }
 
     tr:last-child td {
@@ -383,72 +390,88 @@
 
     .empty {
       color: var(--muted);
-      font-size: 14px;
+      font-size: 13px;
       padding: 12px 2px 4px;
     }
 
     .footer-note {
-      margin-top: 10px;
+      margin-top: 8px;
       color: var(--muted);
-      font-size: 12px;
-      line-height: 1.5;
+      font-size: 11px;
+      line-height: 1.45;
     }
 
     @media (max-width: 980px) {
-      .dashboard-grid,
-      .top-actions-grid,
+      .stats-grid,
       .manage-grid {
         grid-template-columns: 1fr;
       }
 
       h1 {
-        font-size: 27px;
+        font-size: 28px;
       }
     }
   </style>
 </head>
 <body>
-  <div id="appScreen">
-    <div class="container">
-      <div class="hero">
-        <div class="hero-top">
-          <div class="hero-icon">✦</div>
-          <h1>Excel Merge</h1>
-        </div>
-        <p class="subtitle">
-          Upload daily order files or Amazon FBA files, keep them separate, review size-based totals, and export the latest processed file as a clean Excel sheet.
-        </p>
-      </div>
+  <div class="container">
+    <div class="hero">
+      <div class="hero-mark">✦</div>
+      <h1>Excel Merge</h1>
+      <p class="subtitle">
+        Upload daily warehouse files and Amazon FBA files, keep them separate, and open statistics only when you need them.
+      </p>
+    </div>
 
-      <div class="panel top-actions">
-        <div class="top-actions-grid">
-          <input type="date" id="uploadDate" />
-          <button id="downloadBtn" type="button">Export Excel</button>
+    <div class="panel main-upload">
+      <div class="upload-stack">
+        <div class="upload-card">
+          <div class="upload-head">
+            <div class="upload-icon">◌</div>
+            <h3 class="upload-title">Daily Orders</h3>
+          </div>
+          <p class="upload-subtitle">Upload your main daily warehouse Excel file here.</p>
+          <input type="file" id="dailyFileInput" accept=".xlsx,.xls" />
+        </div>
+
+        <div class="upload-card">
+          <div class="upload-head">
+            <div class="upload-icon">↗</div>
+            <h3 class="upload-title">Amazon FBA</h3>
+          </div>
+          <p class="upload-subtitle">Upload your Amazon FBA Excel file here.</p>
+          <input type="file" id="fbaFileInput" accept=".xlsx,.xls" />
+        </div>
+
+        <div class="topbar">
+          <div class="date-wrap">
+            <input type="date" id="uploadDate" />
+          </div>
+          <button id="toggleStatsBtn" type="button">View Statistics</button>
+          <button id="downloadBtn" class="secondary" type="button">Export Last Upload</button>
           <button id="manageBtn" class="secondary" type="button">Manage Data</button>
         </div>
 
         <div id="managePanel" class="manage-panel hidden">
           <h3 class="manage-title">Manage stored data</h3>
-          <p class="manage-subtitle">
-            These actions remove saved data from the dashboard. Use them carefully.
-          </p>
+          <p class="manage-subtitle">These actions remove saved dashboard data. Use them carefully.</p>
 
           <div class="manage-grid">
             <div class="manage-item">
               <h4>Daily Orders</h4>
-              <p>Remove all saved Daily Orders records.</p>
+              <p>Remove all stored Daily Orders records.</p>
               <button id="removeDailyBtn" class="danger" type="button">Remove Daily Orders</button>
             </div>
 
             <div class="manage-item">
               <h4>Amazon FBA</h4>
-              <p>Remove all saved Amazon FBA records.</p>
+              <p>Remove all stored Amazon FBA records.</p>
               <button id="removeFbaBtn" class="danger" type="button">Remove Amazon FBA</button>
             </div>
 
             <div class="manage-item">
               <h4>All Data</h4>
-              <p>Remove all saved records from both sections.</p>
+              <p>Remove all stored records from both sections.</p>
               <button id="removeAllBtn" class="danger" type="button">Remove All Data</button>
             </div>
           </div>
@@ -456,68 +479,69 @@
 
         <div class="status" id="status"></div>
       </div>
+    </div>
 
-      <div class="dashboard-grid">
-        <div class="panel source-card">
+    <div id="statsPanel" class="panel stats-panel hidden">
+      <div class="stats-grid">
+        <div class="source-card">
           <div class="source-header">
             <h2 class="source-title"><span class="mini-icon">◌</span>Daily Orders</h2>
             <div class="pill" id="dailySummary">No data</div>
           </div>
 
           <div class="inner-stack">
-            <div class="upload-box daily">
-              <div class="upload-head">
-                <div class="upload-icon">◌</div>
-                <h3 class="upload-title">Daily Orders Upload</h3>
-              </div>
-              <p class="upload-subtitle">
-                Use this area for regular daily warehouse order files.
-              </p>
-              <input type="file" id="dailyFileInput" accept=".xlsx,.xls" />
-            </div>
-
             <div class="sub-card">
-              <h3 class="sub-title">Daily size totals</h3>
+              <h3 class="sub-title">Today</h3>
               <div id="dailyOrdersDailyWrap"></div>
-              <div class="footer-note">Totals for the selected date.</div>
+              <div class="footer-note">Daily totals for the selected date.</div>
             </div>
 
             <div class="sub-card">
-              <h3 class="sub-title">Month-to-date size totals</h3>
+              <h3 class="sub-title">This Month</h3>
               <div id="dailyOrdersMonthlyWrap"></div>
-              <div class="footer-note">Running totals for the selected month.</div>
+              <div class="footer-note">Month-to-date totals for Daily Orders.</div>
             </div>
           </div>
         </div>
 
-        <div class="panel source-card">
+        <div class="source-card">
           <div class="source-header">
             <h2 class="source-title"><span class="mini-icon">↗</span>Amazon FBA</h2>
             <div class="pill" id="fbaSummary">No data</div>
           </div>
 
           <div class="inner-stack">
-            <div class="upload-box fba">
-              <div class="upload-head">
-                <div class="upload-icon">↗</div>
-                <h3 class="upload-title">Amazon FBA Upload</h3>
-              </div>
-              <p class="upload-subtitle">
-                Use this area only for Amazon FBA order files.
-              </p>
-              <input type="file" id="fbaFileInput" accept=".xlsx,.xls" />
-            </div>
-
             <div class="sub-card">
-              <h3 class="sub-title">Daily size totals</h3>
+              <h3 class="sub-title">Today</h3>
               <div id="fbaDailyWrap"></div>
-              <div class="footer-note">Totals for the selected date.</div>
+              <div class="footer-note">Daily totals for the selected date.</div>
             </div>
 
             <div class="sub-card">
-              <h3 class="sub-title">Month-to-date size totals</h3>
+              <h3 class="sub-title">This Month</h3>
               <div id="fbaMonthlyWrap"></div>
-              <div class="footer-note">Running totals for the selected month.</div>
+              <div class="footer-note">Month-to-date totals for Amazon FBA.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="source-card">
+          <div class="source-header">
+            <h2 class="source-title"><span class="mini-icon">✦</span>Total</h2>
+            <div class="pill" id="totalSummary">No data</div>
+          </div>
+
+          <div class="inner-stack">
+            <div class="sub-card">
+              <h3 class="sub-title">Today</h3>
+              <div id="combinedDailyWrap"></div>
+              <div class="footer-note">Combined Daily Orders + Amazon FBA totals for the selected date.</div>
+            </div>
+
+            <div class="sub-card">
+              <h3 class="sub-title">This Month</h3>
+              <div id="combinedMonthlyWrap"></div>
+              <div class="footer-note">Combined month-to-date totals across both sources.</div>
             </div>
           </div>
         </div>
@@ -532,6 +556,8 @@
     const dailyFileInput = document.getElementById("dailyFileInput");
     const fbaFileInput = document.getElementById("fbaFileInput");
     const uploadDateInput = document.getElementById("uploadDate");
+    const toggleStatsBtn = document.getElementById("toggleStatsBtn");
+    const statsPanel = document.getElementById("statsPanel");
     const downloadBtn = document.getElementById("downloadBtn");
     const manageBtn = document.getElementById("manageBtn");
     const managePanel = document.getElementById("managePanel");
@@ -544,8 +570,11 @@
     const dailyOrdersMonthlyWrap = document.getElementById("dailyOrdersMonthlyWrap");
     const fbaDailyWrap = document.getElementById("fbaDailyWrap");
     const fbaMonthlyWrap = document.getElementById("fbaMonthlyWrap");
+    const combinedDailyWrap = document.getElementById("combinedDailyWrap");
+    const combinedMonthlyWrap = document.getElementById("combinedMonthlyWrap");
     const dailySummary = document.getElementById("dailySummary");
     const fbaSummary = document.getElementById("fbaSummary");
+    const totalSummary = document.getElementById("totalSummary");
 
     const today = new Date().toISOString().slice(0, 10);
     uploadDateInput.value = today;
@@ -558,16 +587,22 @@
       handleFile(e, "fba");
     });
 
+    toggleStatsBtn.addEventListener("click", function() {
+      statsPanel.classList.toggle("hidden");
+      toggleStatsBtn.textContent = statsPanel.classList.contains("hidden")
+        ? "View Statistics"
+        : "Hide Statistics";
+    });
+
+    manageBtn.addEventListener("click", function() {
+      managePanel.classList.toggle("hidden");
+    });
+
     downloadBtn.addEventListener("click", downloadExcel);
-    manageBtn.addEventListener("click", toggleManagePanel);
     removeDailyBtn.addEventListener("click", removeDailyData);
     removeFbaBtn.addEventListener("click", removeFbaData);
     removeAllBtn.addEventListener("click", removeAllData);
     uploadDateInput.addEventListener("change", renderDashboard);
-
-    function toggleManagePanel() {
-      managePanel.classList.toggle("hidden");
-    }
 
     function normalizeSku(value) {
       return String(value || "").trim();
@@ -651,21 +686,10 @@
       container.innerHTML = html;
     }
 
-    function buildSourceSummary(source, selectedDate) {
-      const monthPrefix = selectedDate.slice(0, 7);
-
-      const dailyRows = historyData.filter(item =>
-        item.source === source && item.uploadDate === selectedDate
-      );
-
-      const monthlyRows = historyData.filter(item =>
-        item.source === source && item.uploadDate.startsWith(monthPrefix)
-      );
-
-      const dailyQty = dailyRows.reduce((sum, item) => sum + item.quantity, 0);
-      const monthlyQty = monthlyRows.reduce((sum, item) => sum + item.quantity, 0);
-
-      return `Day ${dailyQty} · Month ${monthlyQty}`;
+    function buildSourceSummary(recordsForDay, recordsForMonth) {
+      const dayQty = recordsForDay.reduce((sum, item) => sum + item.quantity, 0);
+      const monthQty = recordsForMonth.reduce((sum, item) => sum + item.quantity, 0);
+      return `Day ${dayQty} · Month ${monthQty}`;
     }
 
     function handleFile(event, source) {
@@ -758,12 +782,11 @@
       });
 
       saveState();
+      renderDashboard();
 
       const sourceLabel = source === "daily" ? "Daily Orders" : "Amazon FBA";
       statusEl.textContent =
         `${sourceLabel}: ${keptRows} rows saved, ${skippedRows} rows skipped. Sizes below 5x7 were ignored. Last file: ${fileName}`;
-
-      renderDashboard();
 
       if (source === "daily") {
         dailyFileInput.value = "";
@@ -788,6 +811,13 @@
       );
       const fbaMonthlyRows = historyData.filter(item =>
         item.source === "fba" && item.uploadDate.startsWith(monthPrefix)
+      );
+
+      const combinedDailyRows = historyData.filter(item =>
+        item.uploadDate === selectedDate
+      );
+      const combinedMonthlyRows = historyData.filter(item =>
+        item.uploadDate.startsWith(monthPrefix)
       );
 
       renderSimpleTable(
@@ -818,8 +848,23 @@
         "QUANTITY"
       );
 
-      dailySummary.textContent = buildSourceSummary("daily", selectedDate);
-      fbaSummary.textContent = buildSourceSummary("fba", selectedDate);
+      renderSimpleTable(
+        combinedDailyWrap,
+        buildSizeTotals(combinedDailyRows),
+        "SIZE",
+        "QUANTITY"
+      );
+
+      renderSimpleTable(
+        combinedMonthlyWrap,
+        buildSizeTotals(combinedMonthlyRows),
+        "SIZE",
+        "QUANTITY"
+      );
+
+      dailySummary.textContent = buildSourceSummary(dailyOrdersDailyRows, dailyOrdersMonthlyRows);
+      fbaSummary.textContent = buildSourceSummary(fbaDailyRows, fbaMonthlyRows);
+      totalSummary.textContent = buildSourceSummary(combinedDailyRows, combinedMonthlyRows);
     }
 
     async function downloadExcel() {
@@ -909,7 +954,7 @@
     }
 
     function removeDailyData() {
-      const ok = confirm("Remove all saved Daily Orders data?");
+      const ok = confirm("Remove all stored Daily Orders data?");
       if (!ok) return;
 
       historyData = historyData.filter(item => item.source !== "daily");
@@ -923,7 +968,7 @@
     }
 
     function removeFbaData() {
-      const ok = confirm("Remove all saved Amazon FBA data?");
+      const ok = confirm("Remove all stored Amazon FBA data?");
       if (!ok) return;
 
       historyData = historyData.filter(item => item.source !== "fba");
@@ -937,7 +982,7 @@
     }
 
     function removeAllData() {
-      const ok = confirm("Remove all saved data?");
+      const ok = confirm("Remove all stored data?");
       if (!ok) return;
 
       historyData = [];
