@@ -12,9 +12,9 @@
   <style>
     :root {
       --bg: #262626;
-      --panel: #2e2e2e;
-      --panel-2: #323232;
-      --panel-3: #383838;
+      --panel: #2f2f2f;
+      --panel-2: #343434;
+      --panel-3: #3a3a3a;
       --text: #f5f5f5;
       --muted: #aaaaaa;
       --line: rgba(255,255,255,0.08);
@@ -47,18 +47,18 @@
     }
 
     .container {
-      max-width: 880px;
+      max-width: 980px;
       margin: 0 auto;
     }
 
     .hero {
       text-align: center;
-      margin-bottom: 20px;
+      margin-bottom: 18px;
     }
 
     .hero-mark {
-      width: 52px;
-      height: 52px;
+      width: 50px;
+      height: 50px;
       margin: 0 auto 12px;
       border-radius: 18px;
       display: flex;
@@ -72,17 +72,17 @@
 
     h1 {
       margin: 0 0 6px 0;
-      font-size: 32px;
+      font-size: 30px;
       font-weight: 650;
       letter-spacing: -0.04em;
     }
 
     .subtitle {
       margin: 0 auto;
-      max-width: 560px;
+      max-width: 520px;
       color: var(--muted);
       font-size: 13px;
-      line-height: 1.6;
+      line-height: 1.55;
     }
 
     .main-shell {
@@ -90,54 +90,21 @@
       border: 1px solid var(--line);
       border-radius: 30px;
       box-shadow: var(--shadow);
-      padding: 22px;
+      padding: 18px;
     }
 
-    .upload-stack {
-      display: grid;
-      gap: 12px;
-    }
-
-    .upload-card {
-      background: rgba(255,255,255,0.025);
-      border: 1px solid var(--line);
-      border-radius: 22px;
-      padding: 14px;
-    }
-
-    .upload-head {
+    .top-controls {
       display: flex;
+      justify-content: center;
       align-items: center;
       gap: 10px;
-      margin-bottom: 8px;
+      flex-wrap: wrap;
     }
 
-    .upload-icon {
-      width: 28px;
-      height: 28px;
-      border-radius: 10px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(255,255,255,0.06);
-      font-size: 12px;
+    .date-wrap {
+      width: 180px;
     }
 
-    .upload-title {
-      margin: 0;
-      font-size: 14px;
-      font-weight: 600;
-      letter-spacing: -0.01em;
-    }
-
-    .upload-subtitle {
-      margin: 0 0 10px 0;
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.45;
-    }
-
-    input[type="file"],
     input[type="date"] {
       width: 100%;
       padding: 12px 13px;
@@ -147,30 +114,6 @@
       color: var(--text);
       outline: none;
       font-size: 14px;
-    }
-
-    input[type="file"]::file-selector-button {
-      border: none;
-      background: #f5f5f5;
-      color: #111;
-      padding: 8px 11px;
-      border-radius: 10px;
-      margin-right: 10px;
-      cursor: pointer;
-      font-weight: 600;
-    }
-
-    .controls {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-top: 14px;
-    }
-
-    .date-wrap {
-      width: 180px;
     }
 
     button {
@@ -201,6 +144,22 @@
       background: rgba(255, 180, 180, 0.08);
       color: var(--danger);
       border: 1px solid rgba(255, 180, 180, 0.14);
+    }
+
+    .upload-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+
+    .upload-meta {
+      text-align: center;
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 10px;
+      min-height: 16px;
     }
 
     .status {
@@ -404,65 +363,55 @@
       <div class="hero-mark">✦</div>
       <h1>Excel Merge</h1>
       <p class="subtitle">
-        Upload daily files and Amazon FBA files. Statistics stay out of the way until you open them.
+        Upload daily files and Amazon FBA files. Statistics stay hidden until you need them.
       </p>
     </div>
 
     <div class="main-shell">
-      <div class="upload-stack">
-        <div class="upload-card">
-          <div class="upload-head">
-            <div class="upload-icon">◌</div>
-            <h3 class="upload-title">Daily Orders</h3>
-          </div>
-          <p class="upload-subtitle">Upload your main daily warehouse Excel file here.</p>
-          <input type="file" id="dailyFileInput" accept=".xlsx,.xls" />
+      <div class="top-controls">
+        <div class="date-wrap">
+          <input type="date" id="uploadDate" />
         </div>
-
-        <div class="upload-card">
-          <div class="upload-head">
-            <div class="upload-icon">↗</div>
-            <h3 class="upload-title">Amazon FBA</h3>
-          </div>
-          <p class="upload-subtitle">Upload your Amazon FBA Excel file here.</p>
-          <input type="file" id="fbaFileInput" accept=".xlsx,.xls" />
-        </div>
-
-        <div class="controls">
-          <div class="date-wrap">
-            <input type="date" id="uploadDate" />
-          </div>
-          <button id="toggleStatsBtn" type="button">View Statistics</button>
-          <button id="manageBtn" class="secondary" type="button">Manage Data</button>
-        </div>
-
-        <div id="managePanel" class="manage-panel hidden">
-          <h3 class="manage-title">Manage stored data</h3>
-          <p class="manage-subtitle">These actions remove saved dashboard data. Use them carefully.</p>
-
-          <div class="manage-grid">
-            <div class="manage-item">
-              <h4>Daily Orders</h4>
-              <p>Remove all stored Daily Orders records.</p>
-              <button id="removeDailyBtn" class="danger" type="button">Remove Daily Orders</button>
-            </div>
-
-            <div class="manage-item">
-              <h4>Amazon FBA</h4>
-              <p>Remove all stored Amazon FBA records.</p>
-              <button id="removeFbaBtn" class="danger" type="button">Remove Amazon FBA</button>
-            </div>
-
-            <div class="manage-item">
-              <h4>All Data</h4>
-              <p>Remove all stored records from both sections.</p>
-              <button id="removeAllBtn" class="danger" type="button">Remove All Data</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="status" id="status"></div>
+        <button id="toggleStatsBtn" type="button">View Statistics</button>
+        <button id="manageBtn" class="secondary" type="button">Manage Data</button>
       </div>
+
+      <div class="upload-buttons">
+        <button id="dailyUploadBtn" type="button">Upload Daily Orders</button>
+        <button id="fbaUploadBtn" class="secondary" type="button">Upload Amazon FBA</button>
+      </div>
+
+      <input type="file" id="dailyFileInput" accept=".xlsx,.xls" class="hidden" />
+      <input type="file" id="fbaFileInput" accept=".xlsx,.xls" class="hidden" />
+
+      <div class="upload-meta" id="uploadMeta"></div>
+
+      <div id="managePanel" class="manage-panel hidden">
+        <h3 class="manage-title">Manage stored data</h3>
+        <p class="manage-subtitle">These actions remove saved dashboard data. Use them carefully.</p>
+
+        <div class="manage-grid">
+          <div class="manage-item">
+            <h4>Daily Orders</h4>
+            <p>Remove all stored Daily Orders records.</p>
+            <button id="removeDailyBtn" class="danger" type="button">Remove Daily Orders</button>
+          </div>
+
+          <div class="manage-item">
+            <h4>Amazon FBA</h4>
+            <p>Remove all stored Amazon FBA records.</p>
+            <button id="removeFbaBtn" class="danger" type="button">Remove Amazon FBA</button>
+          </div>
+
+          <div class="manage-item">
+            <h4>All Data</h4>
+            <p>Remove all stored records from both sections.</p>
+            <button id="removeAllBtn" class="danger" type="button">Remove All Data</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="status" id="status"></div>
     </div>
 
     <div id="statsPanel" class="stats-panel hidden">
@@ -470,7 +419,7 @@
         <div class="source-card">
           <div class="source-header">
             <h2 class="source-title"><span class="mini-icon">◌</span>Daily Orders</h2>
-            <div class="pill" id="dailySummary">No data</div>
+            <div class="pill" id="dailySummary">Today: 0 · Month: 0</div>
           </div>
 
           <div class="inner-stack">
@@ -491,7 +440,7 @@
         <div class="source-card">
           <div class="source-header">
             <h2 class="source-title"><span class="mini-icon">↗</span>Amazon FBA</h2>
-            <div class="pill" id="fbaSummary">No data</div>
+            <div class="pill" id="fbaSummary">Today: 0 · Month: 0</div>
           </div>
 
           <div class="inner-stack">
@@ -512,7 +461,7 @@
         <div class="source-card">
           <div class="source-header">
             <h2 class="source-title"><span class="mini-icon">✦</span>Total</h2>
-            <div class="pill" id="totalSummary">No data</div>
+            <div class="pill" id="totalSummary">Today: 0 · Month: 0</div>
           </div>
 
           <div class="inner-stack">
@@ -537,9 +486,12 @@
     let historyData = JSON.parse(localStorage.getItem("salesHistory") || "[]");
     let latestProcessedData = JSON.parse(localStorage.getItem("latestProcessedData") || "[]");
 
+    const dailyUploadBtn = document.getElementById("dailyUploadBtn");
+    const fbaUploadBtn = document.getElementById("fbaUploadBtn");
     const dailyFileInput = document.getElementById("dailyFileInput");
     const fbaFileInput = document.getElementById("fbaFileInput");
     const uploadDateInput = document.getElementById("uploadDate");
+    const uploadMeta = document.getElementById("uploadMeta");
     const toggleStatsBtn = document.getElementById("toggleStatsBtn");
     const statsPanel = document.getElementById("statsPanel");
     const manageBtn = document.getElementById("manageBtn");
@@ -561,6 +513,9 @@
 
     const today = new Date().toISOString().slice(0, 10);
     uploadDateInput.value = today;
+
+    dailyUploadBtn.addEventListener("click", () => dailyFileInput.click());
+    fbaUploadBtn.addEventListener("click", () => fbaFileInput.click());
 
     dailyFileInput.addEventListener("change", function(e) {
       handleFile(e, "daily");
@@ -671,7 +626,7 @@
     function buildSourceSummary(recordsForDay, recordsForMonth) {
       const dayQty = recordsForDay.reduce((sum, item) => sum + item.quantity, 0);
       const monthQty = recordsForMonth.reduce((sum, item) => sum + item.quantity, 0);
-      return `Day ${dayQty} · Month ${monthQty}`;
+      return `Today: ${dayQty} · Month: ${monthQty}`;
     }
 
     function handleFile(event, source) {
@@ -679,6 +634,8 @@
       if (!file) return;
 
       const selectedDate = uploadDateInput.value || today;
+      uploadMeta.textContent = `${source === "daily" ? "Daily Orders" : "Amazon FBA"} file selected: ${file.name}`;
+
       const reader = new FileReader();
 
       reader.onload = function(e) {
@@ -775,83 +732,8 @@
           `Amazon FBA: ${keptRows} rows saved, ${skippedRows} rows skipped. No export file created.`;
       }
 
-      if (source === "daily") {
-        dailyFileInput.value = "";
-      } else {
-        fbaFileInput.value = "";
-      }
-    }
-
-    function renderDashboard() {
-      const selectedDate = uploadDateInput.value || today;
-      const monthPrefix = selectedDate.slice(0, 7);
-
-      const dailyOrdersDailyRows = historyData.filter(item =>
-        item.source === "daily" && item.uploadDate === selectedDate
-      );
-      const dailyOrdersMonthlyRows = historyData.filter(item =>
-        item.source === "daily" && item.uploadDate.startsWith(monthPrefix)
-      );
-
-      const fbaDailyRows = historyData.filter(item =>
-        item.source === "fba" && item.uploadDate === selectedDate
-      );
-      const fbaMonthlyRows = historyData.filter(item =>
-        item.source === "fba" && item.uploadDate.startsWith(monthPrefix)
-      );
-
-      const combinedDailyRows = historyData.filter(item =>
-        item.uploadDate === selectedDate
-      );
-      const combinedMonthlyRows = historyData.filter(item =>
-        item.uploadDate.startsWith(monthPrefix)
-      );
-
-      renderSimpleTable(
-        dailyOrdersDailyWrap,
-        buildSizeTotals(dailyOrdersDailyRows),
-        "SIZE",
-        "QUANTITY"
-      );
-
-      renderSimpleTable(
-        dailyOrdersMonthlyWrap,
-        buildSizeTotals(dailyOrdersMonthlyRows),
-        "SIZE",
-        "QUANTITY"
-      );
-
-      renderSimpleTable(
-        fbaDailyWrap,
-        buildSizeTotals(fbaDailyRows),
-        "SIZE",
-        "QUANTITY"
-      );
-
-      renderSimpleTable(
-        fbaMonthlyWrap,
-        buildSizeTotals(fbaMonthlyRows),
-        "SIZE",
-        "QUANTITY"
-      );
-
-      renderSimpleTable(
-        combinedDailyWrap,
-        buildSizeTotals(combinedDailyRows),
-        "SIZE",
-        "QUANTITY"
-      );
-
-      renderSimpleTable(
-        combinedMonthlyWrap,
-        buildSizeTotals(combinedMonthlyRows),
-        "SIZE",
-        "QUANTITY"
-      );
-
-      dailySummary.textContent = buildSourceSummary(dailyOrdersDailyRows, dailyOrdersMonthlyRows);
-      fbaSummary.textContent = buildSourceSummary(fbaDailyRows, fbaMonthlyRows);
-      totalSummary.textContent = buildSourceSummary(combinedDailyRows, combinedMonthlyRows);
+      dailyFileInput.value = "";
+      fbaFileInput.value = "";
     }
 
     async function createExcelBlobFromLatestProcessedData() {
@@ -936,6 +818,43 @@
         console.error("Auto download error:", error);
         statusEl.textContent = "Daily Orders processed, but automatic download failed.";
       }
+    }
+
+    function renderDashboard() {
+      const selectedDate = uploadDateInput.value || today;
+      const monthPrefix = selectedDate.slice(0, 7);
+
+      const dailyOrdersDailyRows = historyData.filter(item =>
+        item.source === "daily" && item.uploadDate === selectedDate
+      );
+      const dailyOrdersMonthlyRows = historyData.filter(item =>
+        item.source === "daily" && item.uploadDate.startsWith(monthPrefix)
+      );
+
+      const fbaDailyRows = historyData.filter(item =>
+        item.source === "fba" && item.uploadDate === selectedDate
+      );
+      const fbaMonthlyRows = historyData.filter(item =>
+        item.source === "fba" && item.uploadDate.startsWith(monthPrefix)
+      );
+
+      const combinedDailyRows = historyData.filter(item =>
+        item.uploadDate === selectedDate
+      );
+      const combinedMonthlyRows = historyData.filter(item =>
+        item.uploadDate.startsWith(monthPrefix)
+      );
+
+      renderSimpleTable(dailyOrdersDailyWrap, buildSizeTotals(dailyOrdersDailyRows), "SIZE", "QUANTITY");
+      renderSimpleTable(dailyOrdersMonthlyWrap, buildSizeTotals(dailyOrdersMonthlyRows), "SIZE", "QUANTITY");
+      renderSimpleTable(fbaDailyWrap, buildSizeTotals(fbaDailyRows), "SIZE", "QUANTITY");
+      renderSimpleTable(fbaMonthlyWrap, buildSizeTotals(fbaMonthlyRows), "SIZE", "QUANTITY");
+      renderSimpleTable(combinedDailyWrap, buildSizeTotals(combinedDailyRows), "SIZE", "QUANTITY");
+      renderSimpleTable(combinedMonthlyWrap, buildSizeTotals(combinedMonthlyRows), "SIZE", "QUANTITY");
+
+      dailySummary.textContent = buildSourceSummary(dailyOrdersDailyRows, dailyOrdersMonthlyRows);
+      fbaSummary.textContent = buildSourceSummary(fbaDailyRows, fbaMonthlyRows);
+      totalSummary.textContent = buildSourceSummary(combinedDailyRows, combinedMonthlyRows);
     }
 
     function removeDailyData() {
