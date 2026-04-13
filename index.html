@@ -61,7 +61,7 @@
 <body>
   <label class="upload-area" for="fileInput">
     <h1>Excel Dosyalarını Yükle</h1>
-    <p>Bir veya birden fazla Excel dosyası seç.<br>Yükleme biter bitmez aynı SKU'lar birleştirilir ve dosya otomatik indirilir.</p>
+    <p>Bir veya birden fazla Excel dosyası seç.<br>Yükleme biter bitmez ilk kolon ürün kodu, ikinci kolon sipariş adedi kabul edilir ve dosya otomatik indirilir.</p>
     <div class="status" id="status">Hazır</div>
     <div class="error" id="error"></div>
   </label>
@@ -79,22 +79,6 @@
 
     function setError(text) {
       errorEl.textContent = text || '';
-    }
-
-    function normalizeHeader(value) {
-      return String(value || '')
-        .trim()
-        .toUpperCase()
-        .replace(/\s+/g, ' ');
-    }
-
-    function findColumn(headers, targets) {
-      const normalizedHeaders = headers.map(normalizeHeader);
-      for (const target of targets) {
-        const index = normalizedHeaders.indexOf(normalizeHeader(target));
-        if (index !== -1) return headers[index];
-      }
-      return null;
     }
 
     function toNumber(value) {
@@ -126,25 +110,27 @@
       if (!allRows.length) throw new Error('Dosyalarda veri bulunamadı.');
 
       const headers = Object.keys(allRows[0] || {});
-      const skuColumn = findColumn(headers, ['SKU', 'STOCK KEEPING UNIT', 'ITEM SKU', 'PRODUCT SKU']);
-      const qtyColumn = findColumn(headers, ['QTY', 'QUANTITY', 'ADET', 'MIKTAR', 'MİKTAR']);
-
-      if (!skuColumn || !qtyColumn) {
-        throw new Error('SKU ve QTY kolonları bulunamadı.');
+      if (headers.length < 2) {
+        throw new Error('Dosyada en az 2 kolon olmalı.');
       }
 
+      const productColumn = headers[0];
+      const quantityColumn = headers[1];
       const grouped = new Map();
 
       for (const row of allRows) {
-        const sku = String(row[skuColumn] || '').trim();
-        if (!sku) continue;
+        const productCode = String(row[productColumn] || '').trim();
+        if (!productCode) continue;
 
-        const qty = toNumber(row[qtyColumn]);
+        const qty = toNumber(row[quantityColumn]);
 
-        if (!grouped.has(sku)) {
-          grouped.set(sku, { SKU: sku, QTY: qty });
+        if (!grouped.has(productCode)) {
+          grouped.set(productCode, {
+            SKU: productCode,
+            QTY: qty,
+          });
         } else {
-          grouped.get(sku).QTY += qty;
+          grouped.get(productCode).QTY += qty;
         }
       }
 
