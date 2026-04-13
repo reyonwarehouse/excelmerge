@@ -1,978 +1,282 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Excel Merge</title>
+import React, { useEffect, useMemo, useState } from "react";
+import * as XLSX from "xlsx";
+import { Upload, Trash2, Download, Database, FileSpreadsheet } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
-  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/file-saver/dist/FileSaver.min.js"></script>
+const STORAGE_KEY = "sku-merger-data-v1";
 
-  <style>
-    :root {
-      --bg: #262626;
-      --panel: rgba(255,255,255,0.03);
-      --panel-2: rgba(255,255,255,0.035);
-      --text: #f5f5f5;
-      --muted: #a8a8a8;
-      --line: rgba(255,255,255,0.08);
-      --line-soft: rgba(255,255,255,0.05);
-      --shadow: 0 18px 40px rgba(0, 0, 0, 0.22);
-      --radius: 18px;
-      --radius-sm: 14px;
-      --danger: #ffb4b4;
-      --white: #f5f5f5;
-      --black: #111111;
+function normalizeHeader(value) {
+  return String(value ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, " ");
+}
+
+function findColumn(headers, targets) {
+  const normalized = headers.map(normalizeHeader);
+  for (const target of targets) {
+    const idx = normalized.indexOf(normalizeHeader(target));
+    if (idx !== -1) return headers[idx];
+  }
+  return null;
+}
+
+function toNumber(value) {
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+  const cleaned = String(value ?? "")
+    .replace(/,/g, "")
+    .trim();
+  const parsed = Number(cleaned);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function mergeRows(allRows) {
+  if (!allRows.length) {
+    return { merged: [], skuColumn: null, qtyColumn: null };
+  }
+
+  const firstHeaders = Object.keys(allRows[0] || {});
+  const skuColumn = findColumn(firstHeaders, ["SKU", "STOCK KEEPING UNIT", "ITEM SKU", "PRODUCT SKU"]);
+  const qtyColumn = findColumn(firstHeaders, ["QTY", "QUANTITY", "ADET", "MİKTAR", "MIKTAR"]);
+
+  if (!skuColumn || !qtyColumn) {
+    throw new Error("Excel dosyasında SKU ve QTY kolonları bulunamadı. Lütfen kolon adları SKU ve QTY olsun.");
+  }
+
+  const map = new Map();
+
+  for (const row of allRows) {
+    const sku = String(row[skuColumn] ?? "").trim();
+    if (!sku) continue;
+
+    const qty = toNumber(row[qtyColumn]);
+
+    if (!map.has(sku)) {
+      map.set(sku, {
+        SKU: sku,
+        QTY: qty,
+      });
+    } else {
+      const current = map.get(sku);
+      current.QTY += qty;
     }
+  }
 
-    * {
-      box-sizing: border-box;
+  const merged = Array.from(map.values()).sort((a, b) => a.SKU.localeCompare(b.SKU));
+  return { merged, skuColumn, qtyColumn };
+}
+
+async function readExcelFiles(files) {
+  const allRows = [];
+  const fileNames = [];
+
+  for (const file of files) {
+    const buffer = await file.arrayBuffer();
+    const workbook = XLSX.read(buffer, { type: "array" });
+    const firstSheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[firstSheetName];
+    const json = XLSX.utils.sheet_to_json(worksheet, {
+      defval: "",
+      raw: false,
+    });
+
+    allRows.push(...json);
+    fileNames.push(file.name);
+  }
+
+  return { allRows, fileNames };
+}
+
+export default function ExcelSkuMergerApp() {
+  const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [mergedRows, setMergedRows] = useState([]);
+  const [status, setStatus] = useState("Hazır");
+  const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+  const [lastSavedAt, setLastSavedAt] = useState("");
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (!saved) return;
+      const parsed = JSON.parse(saved);
+      setUploadedFiles(parsed.uploadedFiles || []);
+      setMergedRows(parsed.mergedRows || []);
+      setLastSavedAt(parsed.lastSavedAt || "");
+      setStatus(parsed.mergedRows?.length ? "Kaydedilmiş veri yüklendi" : "Hazır");
+    } catch {
+      setStatus("Kaydedilmiş veri okunamadı");
     }
+  }, []);
 
-    html, body {
-      margin: 0;
-      padding: 0;
-      min-height: 100%;
-      background: var(--bg);
-      color: var(--text);
-      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  const filteredRows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return mergedRows;
+    return mergedRows.filter((row) => String(row.SKU).toLowerCase().includes(q));
+  }, [mergedRows, search]);
+
+  function persist(nextFiles, nextRows) {
+    const payload = {
+      uploadedFiles: nextFiles,
+      mergedRows: nextRows,
+      lastSavedAt: new Date().toLocaleString(),
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    setLastSavedAt(payload.lastSavedAt);
+  }
+
+  async function handleFileChange(event) {
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
+
+    setError("");
+    setStatus("Dosyalar okunuyor...");
+
+    try {
+      const { allRows, fileNames } = await readExcelFiles(files);
+      const { merged } = mergeRows(allRows);
+      setUploadedFiles(fileNames);
+      setMergedRows(merged);
+      persist(fileNames, merged);
+      setStatus(`${files.length} dosya birleştirildi`);
+    } catch (err) {
+      setError(err.message || "Bir hata oluştu");
+      setStatus("Hata");
     }
+  }
 
-    body {
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      padding: 24px 18px;
-    }
+  function clearAll() {
+    localStorage.removeItem(STORAGE_KEY);
+    setUploadedFiles([]);
+    setMergedRows([]);
+    setSearch("");
+    setError("");
+    setLastSavedAt("");
+    setStatus("Temizlendi");
+  }
 
-    .hidden {
-      display: none !important;
-    }
+  function exportExcel() {
+    if (!mergedRows.length) return;
+    const worksheet = XLSX.utils.json_to_sheet(mergedRows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Merged");
+    XLSX.writeFile(workbook, "merged_sku_qty.xlsx");
+  }
 
-    .container {
-      width: 100%;
-      max-width: 900px;
-      margin: 0 auto;
-      display: grid;
-      gap: 18px;
-      justify-items: center;
-    }
-
-    .top {
-      text-align: center;
-      display: grid;
-      gap: 8px;
-    }
-
-    h1 {
-      margin: 0;
-      font-size: 32px;
-      font-weight: 650;
-      letter-spacing: -0.04em;
-    }
-
-    .controls {
-      position: relative;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .date-wrap {
-      width: 180px;
-    }
-
-    input[type="date"] {
-      width: 100%;
-      padding: 11px 13px;
-      border-radius: 12px;
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,0.04);
-      color: var(--text);
-      outline: none;
-      font-size: 14px;
-    }
-
-    button {
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      padding: 11px 14px;
-      cursor: pointer;
-      background: rgba(255,255,255,0.04);
-      color: var(--text);
-      font-size: 13px;
-      font-weight: 600;
-      letter-spacing: -0.01em;
-      transition: transform 0.15s ease, opacity 0.15s ease, background 0.15s ease;
-    }
-
-    button:hover {
-      transform: translateY(-1px);
-      opacity: 0.97;
-      background: rgba(255,255,255,0.07);
-    }
-
-    button.primary {
-      background: var(--white);
-      color: var(--black);
-      border-color: transparent;
-    }
-
-    button.danger {
-      background: rgba(255, 180, 180, 0.08);
-      color: var(--danger);
-      border: 1px solid rgba(255, 180, 180, 0.14);
-    }
-
-    .upload-btn {
-      width: 52px;
-      height: 46px;
-      padding: 0;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      border-radius: 12px;
-      background: var(--white);
-      color: var(--black);
-      border: none;
-    }
-
-    .upload-btn svg {
-      width: 16px;
-      height: 16px;
-      stroke: currentColor;
-      fill: none;
-      stroke-width: 1.9;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-    }
-
-    .info-button {
-      width: 42px;
-      height: 42px;
-      padding: 0;
-      border-radius: 999px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 16px;
-      line-height: 1;
-      background: rgba(255,255,255,0.05);
-    }
-
-    .status {
-      min-height: 18px;
-      text-align: center;
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.5;
-    }
-
-    .floating-menu {
-      min-width: 220px;
-      padding: 10px;
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      background: rgba(34,34,34,0.96);
-      box-shadow: var(--shadow);
-    }
-
-    .menu-actions {
-      display: grid;
-      gap: 8px;
-    }
-
-    .menu-actions button {
-      text-align: left;
-      border-radius: 12px;
-      padding: 10px 12px;
-    }
-
-    .stats-panel,
-    .manage-panel {
-      width: 100%;
-      max-width: 900px;
-    }
-
-    .manage-panel {
-      padding: 14px;
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      background: var(--panel);
-    }
-
-    .manage-title {
-      margin: 0 0 6px 0;
-      font-size: 14px;
-      font-weight: 600;
-      text-align: center;
-    }
-
-    .manage-subtitle {
-      margin: 0 0 12px 0;
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.45;
-      text-align: center;
-    }
-
-    .manage-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 10px;
-    }
-
-    .manage-item {
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 12px;
-      background: var(--panel-2);
-    }
-
-    .manage-item h4 {
-      margin: 0 0 6px 0;
-      font-size: 13px;
-    }
-
-    .manage-item p {
-      margin: 0 0 10px 0;
-      color: var(--muted);
-      font-size: 11px;
-      line-height: 1.4;
-      min-height: 30px;
-    }
-
-    .stats-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 14px;
-    }
-
-    .source-card {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      padding: 14px;
-    }
-
-    .source-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 12px;
-    }
-
-    .source-title {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin: 0;
-      font-size: 15px;
-      font-weight: 600;
-      letter-spacing: -0.02em;
-    }
-
-    .mini-icon {
-      width: 28px;
-      height: 28px;
-      border-radius: 9px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(255,255,255,0.06);
-      color: var(--text);
-      font-size: 12px;
-    }
-
-    .pill {
-      padding: 6px 9px;
-      border-radius: 999px;
-      font-size: 11px;
-      color: var(--text);
-      background: rgba(255,255,255,0.06);
-      white-space: nowrap;
-    }
-
-    .inner-stack {
-      display: grid;
-      gap: 10px;
-    }
-
-    .sub-card {
-      border: 1px solid var(--line-soft);
-      border-radius: 14px;
-      background: rgba(255,255,255,0.025);
-      padding: 12px;
-    }
-
-    .sub-title {
-      margin: 0 0 8px 0;
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text);
-      letter-spacing: -0.01em;
-    }
-
-    .table-shell {
-      overflow: hidden;
-      border-radius: 12px;
-      border: 1px solid var(--line-soft);
-      background: rgba(255,255,255,0.03);
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-
-    th, td {
-      padding: 10px 11px;
-      font-size: 12px;
-    }
-
-    th {
-      background: rgba(255,255,255,0.03);
-      color: var(--text);
-      font-weight: 600;
-      text-align: left;
-      border-bottom: 1px solid var(--line);
-    }
-
-    td {
-      border-bottom: 1px solid var(--line-soft);
-      color: #ebebeb;
-    }
-
-    tr:last-child td {
-      border-bottom: none;
-    }
-
-    .empty {
-      color: var(--muted);
-      font-size: 12px;
-      padding: 10px 2px 4px;
-    }
-
-    .footer-note {
-      margin-top: 8px;
-      color: var(--muted);
-      font-size: 10px;
-      line-height: 1.4;
-    }
-
-    @media (max-width: 980px) {
-      .stats-grid,
-      .manage-grid {
-        grid-template-columns: 1fr;
-      }
-
-      h1 {
-        font-size: 28px;
-      }
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="top">
-      <h1>Excel Merge</h1>
-    </div>
-
-    <div class="controls">
-      <div class="date-wrap">
-        <input type="date" id="uploadDate" />
-      </div>
-
-      <button id="openUploadPickerBtn" class="upload-btn" type="button" aria-label="Upload Excel">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M7 3h7l5 5v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"></path>
-          <path d="M14 3v5h5"></path>
-        </svg>
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M12 16V7"></path>
-          <path d="M8.5 10.5L12 7l3.5 3.5"></path>
-          <path d="M5 19h14"></path>
-        </svg>
-      </button>
-
-      <button id="openInfoBtn" class="info-button" type="button" aria-label="Open menu">i</button>
-    </div>
-
-    <input type="file" id="dailyFileInput" accept=".xlsx,.xls" class="hidden" />
-    <input type="file" id="fbaFileInput" accept=".xlsx,.xls" class="hidden" />
-
-    <div id="sourcePicker" class="floating-menu hidden">
-      <div class="menu-actions">
-        <button id="pickDailyBtn" type="button">Daily Orders</button>
-        <button id="pickFbaBtn" type="button">Amazon FBA</button>
-      </div>
-    </div>
-
-    <div id="infoMenu" class="floating-menu hidden">
-      <div class="menu-actions">
-        <button id="toggleStatsBtn" type="button">View Statistics</button>
-        <button id="toggleManageBtn" type="button">Manage Data</button>
-      </div>
-    </div>
-
-    <div id="uploadMeta" class="status"></div>
-    <div id="status" class="status"></div>
-
-    <div id="managePanel" class="manage-panel hidden">
-      <h3 class="manage-title">Manage stored data</h3>
-      <p class="manage-subtitle">These actions remove saved dashboard data. Use them carefully.</p>
-
-      <div class="manage-grid">
-        <div class="manage-item">
-          <h4>Daily Orders</h4>
-          <p>Remove all stored Daily Orders records.</p>
-          <button id="removeDailyBtn" class="danger" type="button">Remove Daily Orders</button>
+  return (
+    <div className="min-h-screen bg-neutral-800 text-white p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight">Excel SKU Birleştirici</h1>
+          <p className="text-neutral-300 text-sm">
+            Birden fazla Excel dosyası yükle, aynı SKU olan ürünleri topla, toplamı QTY alanında göster.
+          </p>
         </div>
 
-        <div class="manage-item">
-          <h4>Amazon FBA</h4>
-          <p>Remove all stored Amazon FBA records.</p>
-          <button id="removeFbaBtn" class="danger" type="button">Remove Amazon FBA</button>
-        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Card className="bg-neutral-900 border-neutral-700 text-white lg:col-span-1 rounded-2xl shadow-xl">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Upload className="w-5 h-5" /> Dosya Yükleme
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <label className="block border-2 border-dashed border-neutral-600 rounded-2xl p-6 cursor-pointer hover:border-neutral-400 transition">
+                <div className="flex flex-col items-center justify-center text-center gap-3">
+                  <FileSpreadsheet className="w-10 h-10 text-neutral-300" />
+                  <div>
+                    <div className="font-medium">Excel dosyalarını seç</div>
+                    <div className="text-sm text-neutral-400">Aynı anda 3, 5, 10 veya daha fazla dosya seçebilirsin</div>
+                  </div>
+                </div>
+                <input
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  multiple
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+              </label>
 
-        <div class="manage-item">
-          <h4>All Data</h4>
-          <p>Remove all stored records from both sections.</p>
-          <button id="removeAllBtn" class="danger" type="button">Remove All Data</button>
+              <div className="text-sm space-y-2">
+                <div className="flex items-center gap-2 text-neutral-300">
+                  <Database className="w-4 h-4" /> Durum: {status}
+                </div>
+                {lastSavedAt ? <div className="text-neutral-400">Son kayıt: {lastSavedAt}</div> : null}
+                {error ? <div className="text-red-400">{error}</div> : null}
+              </div>
+
+              <div className="space-y-2">
+                <div className="text-sm font-medium text-neutral-300">Yüklenen dosyalar</div>
+                <div className="max-h-48 overflow-auto rounded-xl bg-neutral-800 p-3 text-sm text-neutral-300 space-y-1">
+                  {uploadedFiles.length ? (
+                    uploadedFiles.map((name, idx) => <div key={`${name}-${idx}`}>• {name}</div>)
+                  ) : (
+                    <div className="text-neutral-500">Henüz dosya yüklenmedi</div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <Button onClick={exportExcel} disabled={!mergedRows.length} className="rounded-xl">
+                  <Download className="w-4 h-4 mr-2" /> Excel İndir
+                </Button>
+                <Button onClick={clearAll} variant="destructive" className="rounded-xl">
+                  <Trash2 className="w-4 h-4 mr-2" /> Temizle
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-neutral-900 border-neutral-700 text-white lg:col-span-2 rounded-2xl shadow-xl">
+            <CardHeader>
+              <CardTitle>Birleşmiş Sonuç</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+                <Input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="SKU ara..."
+                  className="bg-neutral-800 border-neutral-700 text-white placeholder:text-neutral-500"
+                />
+                <div className="text-sm text-neutral-400">
+                  Toplam SKU: <span className="text-white font-semibold">{filteredRows.length}</span>
+                </div>
+              </div>
+
+              <div className="overflow-auto rounded-2xl border border-neutral-700">
+                <table className="w-full text-sm">
+                  <thead className="bg-neutral-800 text-neutral-200">
+                    <tr>
+                      <th className="text-left px-4 py-3 border-b border-neutral-700">SKU</th>
+                      <th className="text-left px-4 py-3 border-b border-neutral-700">QTY</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredRows.length ? (
+                      filteredRows.map((row) => (
+                        <tr key={row.SKU} className="border-b border-neutral-800 hover:bg-neutral-800/70">
+                          <td className="px-4 py-3">{row.SKU}</td>
+                          <td className="px-4 py-3">{row.QTY}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={2} className="px-4 py-8 text-center text-neutral-500">
+                          Sonuç yok
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
-
-    <div id="statsPanel" class="stats-panel hidden">
-      <div class="stats-grid">
-        <div class="source-card">
-          <div class="source-header">
-            <h2 class="source-title"><span class="mini-icon">◌</span>Daily Orders</h2>
-            <div class="pill" id="dailySummary">Today: 0 · Month: 0</div>
-          </div>
-
-          <div class="inner-stack">
-            <div class="sub-card">
-              <h3 class="sub-title">Today</h3>
-              <div id="dailyOrdersDailyWrap"></div>
-              <div class="footer-note">Daily totals for the selected date.</div>
-            </div>
-
-            <div class="sub-card">
-              <h3 class="sub-title">This Month</h3>
-              <div id="dailyOrdersMonthlyWrap"></div>
-              <div class="footer-note">Month-to-date totals for Daily Orders.</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="source-card">
-          <div class="source-header">
-            <h2 class="source-title"><span class="mini-icon">↗</span>Amazon FBA</h2>
-            <div class="pill" id="fbaSummary">Today: 0 · Month: 0</div>
-          </div>
-
-          <div class="inner-stack">
-            <div class="sub-card">
-              <h3 class="sub-title">Today</h3>
-              <div id="fbaDailyWrap"></div>
-              <div class="footer-note">Daily totals for the selected date.</div>
-            </div>
-
-            <div class="sub-card">
-              <h3 class="sub-title">This Month</h3>
-              <div id="fbaMonthlyWrap"></div>
-              <div class="footer-note">Month-to-date totals for Amazon FBA.</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="source-card">
-          <div class="source-header">
-            <h2 class="source-title"><span class="mini-icon">✦</span>Total</h2>
-            <div class="pill" id="totalSummary">Today: 0 · Month: 0</div>
-          </div>
-
-          <div class="inner-stack">
-            <div class="sub-card">
-              <h3 class="sub-title">Today</h3>
-              <div id="combinedDailyWrap"></div>
-              <div class="footer-note">Combined Daily Orders + Amazon FBA totals.</div>
-            </div>
-
-            <div class="sub-card">
-              <h3 class="sub-title">This Month</h3>
-              <div id="combinedMonthlyWrap"></div>
-              <div class="footer-note">Combined month-to-date totals across both sources.</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    let historyData = JSON.parse(localStorage.getItem("salesHistory") || "[]");
-    let latestProcessedData = JSON.parse(localStorage.getItem("latestProcessedData") || "[]");
-
-    const openUploadPickerBtn = document.getElementById("openUploadPickerBtn");
-    const openInfoBtn = document.getElementById("openInfoBtn");
-    const sourcePicker = document.getElementById("sourcePicker");
-    const infoMenu = document.getElementById("infoMenu");
-
-    const pickDailyBtn = document.getElementById("pickDailyBtn");
-    const pickFbaBtn = document.getElementById("pickFbaBtn");
-
-    const toggleStatsBtn = document.getElementById("toggleStatsBtn");
-    const toggleManageBtn = document.getElementById("toggleManageBtn");
-
-    const dailyFileInput = document.getElementById("dailyFileInput");
-    const fbaFileInput = document.getElementById("fbaFileInput");
-    const uploadDateInput = document.getElementById("uploadDate");
-    const uploadMeta = document.getElementById("uploadMeta");
-    const managePanel = document.getElementById("managePanel");
-    const statsPanel = document.getElementById("statsPanel");
-    const removeDailyBtn = document.getElementById("removeDailyBtn");
-    const removeFbaBtn = document.getElementById("removeFbaBtn");
-    const removeAllBtn = document.getElementById("removeAllBtn");
-    const statusEl = document.getElementById("status");
-
-    const dailyOrdersDailyWrap = document.getElementById("dailyOrdersDailyWrap");
-    const dailyOrdersMonthlyWrap = document.getElementById("dailyOrdersMonthlyWrap");
-    const fbaDailyWrap = document.getElementById("fbaDailyWrap");
-    const fbaMonthlyWrap = document.getElementById("fbaMonthlyWrap");
-    const combinedDailyWrap = document.getElementById("combinedDailyWrap");
-    const combinedMonthlyWrap = document.getElementById("combinedMonthlyWrap");
-    const dailySummary = document.getElementById("dailySummary");
-    const fbaSummary = document.getElementById("fbaSummary");
-    const totalSummary = document.getElementById("totalSummary");
-
-    const today = new Date().toISOString().slice(0, 10);
-    uploadDateInput.value = today;
-
-    openUploadPickerBtn.addEventListener("click", () => {
-      infoMenu.classList.add("hidden");
-      sourcePicker.classList.toggle("hidden");
-    });
-
-    openInfoBtn.addEventListener("click", () => {
-      sourcePicker.classList.add("hidden");
-      infoMenu.classList.toggle("hidden");
-    });
-
-    pickDailyBtn.addEventListener("click", () => {
-      sourcePicker.classList.add("hidden");
-      dailyFileInput.click();
-    });
-
-    pickFbaBtn.addEventListener("click", () => {
-      sourcePicker.classList.add("hidden");
-      fbaFileInput.click();
-    });
-
-    toggleStatsBtn.addEventListener("click", () => {
-      statsPanel.classList.toggle("hidden");
-      infoMenu.classList.add("hidden");
-      toggleStatsBtn.textContent = statsPanel.classList.contains("hidden")
-        ? "View Statistics"
-        : "Hide Statistics";
-    });
-
-    toggleManageBtn.addEventListener("click", () => {
-      managePanel.classList.toggle("hidden");
-      infoMenu.classList.add("hidden");
-    });
-
-    dailyFileInput.addEventListener("change", function(e) {
-      handleFile(e, "daily");
-    });
-
-    fbaFileInput.addEventListener("change", function(e) {
-      handleFile(e, "fba");
-    });
-
-    removeDailyBtn.addEventListener("click", removeDailyData);
-    removeFbaBtn.addEventListener("click", removeFbaData);
-    removeAllBtn.addEventListener("click", removeAllData);
-    uploadDateInput.addEventListener("change", renderDashboard);
-
-    document.addEventListener("click", function(e) {
-      const clickedInsideUpload =
-        sourcePicker.contains(e.target) || openUploadPickerBtn.contains(e.target);
-      const clickedInsideInfo =
-        infoMenu.contains(e.target) || openInfoBtn.contains(e.target);
-
-      if (!clickedInsideUpload) sourcePicker.classList.add("hidden");
-      if (!clickedInsideInfo) infoMenu.classList.add("hidden");
-    });
-
-    function normalizeSku(value) {
-      return String(value || "").trim();
-    }
-
-    function extractSize(sku) {
-      const match = sku.match(/(\d+)\s*x\s*(\d+)/i);
-      if (!match) return null;
-
-      return {
-        text: `${Number(match[1])}x${Number(match[2])}`,
-        w: Number(match[1]),
-        h: Number(match[2])
-      };
-    }
-
-    function isAllowedSize(sizeObj) {
-      if (!sizeObj) return false;
-      if (sizeObj.w > 5) return true;
-      if (sizeObj.w === 5 && sizeObj.h >= 7) return true;
-      return false;
-    }
-
-    function compareSizeText(a, b) {
-      const sa = extractSize(a);
-      const sb = extractSize(b);
-
-      if (!sa && !sb) return 0;
-      if (!sa) return 1;
-      if (!sb) return -1;
-
-      return sa.w - sb.w || sa.h - sb.h;
-    }
-
-    function buildSizeTotals(records) {
-      const totals = {};
-
-      records.forEach(item => {
-        if (!item.size) return;
-        totals[item.size] = (totals[item.size] || 0) + item.quantity;
-      });
-
-      return Object.entries(totals)
-        .sort((a, b) => compareSizeText(a[0], b[0]))
-        .map(([size, quantity]) => ({ size, quantity }));
-    }
-
-    function renderSimpleTable(container, rows, leftHeader, rightHeader) {
-      if (!rows.length) {
-        container.innerHTML = '<div class="empty">No data</div>';
-        return;
-      }
-
-      let html = `
-        <div class="table-shell">
-          <table>
-            <thead>
-              <tr>
-                <th>${leftHeader}</th>
-                <th style="text-align:center;">${rightHeader}</th>
-              </tr>
-            </thead>
-            <tbody>
-      `;
-
-      rows.forEach(row => {
-        html += `
-          <tr>
-            <td>${row.size}</td>
-            <td style="text-align:center;">${row.quantity}</td>
-          </tr>
-        `;
-      });
-
-      html += `
-            </tbody>
-          </table>
-        </div>
-      `;
-
-      container.innerHTML = html;
-    }
-
-    function buildSourceSummary(recordsForDay, recordsForMonth) {
-      const dayQty = recordsForDay.reduce((sum, item) => sum + item.quantity, 0);
-      const monthQty = recordsForMonth.reduce((sum, item) => sum + item.quantity, 0);
-      return `Today: ${dayQty} · Month: ${monthQty}`;
-    }
-
-    function handleFile(event, source) {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      const selectedDate = uploadDateInput.value || today;
-      uploadMeta.textContent = `${source === "daily" ? "Daily Orders" : "Amazon FBA"} selected: ${file.name}`;
-
-      const reader = new FileReader();
-
-      reader.onload = function(e) {
-        try {
-          const workbook = XLSX.read(e.target.result, { type: "binary" });
-          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-          const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: "" });
-          processData(rows, selectedDate, source, file.name);
-        } catch (error) {
-          console.error("Read error:", error);
-          statusEl.textContent = "Could not read the file.";
-        }
-      };
-
-      reader.readAsBinaryString(file);
-    }
-
-    async function processData(rows, uploadDate, source, fileName) {
-      const map = {};
-      let keptRows = 0;
-      let skippedRows = 0;
-
-      rows.forEach((row) => {
-        const values = Object.values(row);
-        const skuRaw = normalizeSku(row.SKU || row.sku || values[0]);
-        const qtyRaw = row.Quantity || row.quantity || values[1];
-        const quantity = Number(qtyRaw);
-
-        if (!skuRaw || !Number.isFinite(quantity) || quantity <= 0) {
-          skippedRows++;
-          return;
-        }
-
-        const sizeObj = extractSize(skuRaw);
-
-        if (!isAllowedSize(sizeObj)) {
-          skippedRows++;
-          return;
-        }
-
-        const sizeText = sizeObj.text;
-        const key = skuRaw;
-
-        if (!map[key]) {
-          map[key] = {
-            sku: skuRaw,
-            size: sizeText,
-            quantity: 0,
-            source: source
-          };
-        }
-
-        map[key].quantity += quantity;
-        keptRows++;
-      });
-
-      latestProcessedData = Object.values(map)
-        .sort((a, b) => compareSizeText(a.size, b.size) || a.sku.localeCompare(b.sku))
-        .map(item => ({
-          ...item,
-          uploadDate
-        }));
-
-      latestProcessedData.forEach(item => {
-        const existing = historyData.find(
-          h =>
-            h.uploadDate === uploadDate &&
-            h.sku === item.sku &&
-            h.source === item.source
-        );
-
-        if (existing) {
-          existing.quantity += item.quantity;
-        } else {
-          historyData.push({
-            sku: item.sku,
-            size: item.size,
-            quantity: item.quantity,
-            uploadDate,
-            source: item.source
-          });
-        }
-      });
-
-      saveState();
-      renderDashboard();
-
-      if (source === "daily") {
-        statusEl.textContent =
-          `Daily Orders: ${keptRows} rows saved, ${skippedRows} rows skipped. Preparing Excel download...`;
-        await autoDownloadDailyExport();
-      } else {
-        statusEl.textContent =
-          `Amazon FBA: ${keptRows} rows saved, ${skippedRows} rows skipped. No export file created.`;
-      }
-
-      dailyFileInput.value = "";
-      fbaFileInput.value = "";
-    }
-
-    async function createExcelBlobFromLatestProcessedData() {
-      if (!latestProcessedData || !latestProcessedData.length) {
-        throw new Error("No processed data to export.");
-      }
-
-      if (typeof ExcelJS === "undefined") {
-        throw new Error("Excel export library is not loaded.");
-      }
-
-      const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet("Sales");
-
-      const longestSkuLength = Math.max(
-        3,
-        ...latestProcessedData.map(item => String(item.sku || "").length)
-      );
-
-      worksheet.columns = [
-        { header: "SKU", key: "sku", width: longestSkuLength + 2 },
-        { header: "QUANTITY", key: "quantity", width: 14 }
-      ];
-
-      latestProcessedData.forEach(item => {
-        worksheet.addRow({
-          sku: item.sku,
-          quantity: item.quantity
-        });
-      });
-
-      worksheet.eachRow((row, rowNumber) => {
-        row.eachCell((cell, colNumber) => {
-          cell.border = {
-            top: { style: "thin" },
-            left: { style: "thin" },
-            bottom: { style: "thin" },
-            right: { style: "thin" }
-          };
-
-          cell.font = {
-            name: "Calibri",
-            size: 11,
-            bold: rowNumber === 1
-          };
-
-          cell.alignment = {
-            vertical: "middle",
-            horizontal: rowNumber === 1 ? "center" : (colNumber === 1 ? "left" : "center")
-          };
-        });
-      });
-
-      const buffer = await workbook.xlsx.writeBuffer();
-
-      return new Blob(
-        [buffer],
-        { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }
-      );
-    }
-
-    async function autoDownloadDailyExport() {
-      try {
-        const blob = await createExcelBlobFromLatestProcessedData();
-        const fileName = "daily_orders_output.xlsx";
-
-        if (typeof saveAs === "function") {
-          saveAs(blob, fileName);
-        } else {
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = fileName;
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-          URL.revokeObjectURL(url);
-        }
-
-        statusEl.textContent = "Daily Orders processed and Excel downloaded.";
-      } catch (error) {
-        console.error("Auto download error:", error);
-        statusEl.textContent = "Daily Orders processed, but automatic download failed.";
-      }
-    }
-
-    function renderDashboard() {
-      const selectedDate = uploadDateInput.value || today;
-      const monthPrefix = selectedDate.slice(0, 7);
-
-      const dailyOrdersDailyRows = historyData.filter(item =>
-        item.source === "daily" && item.uploadDate === selectedDate
-      );
-      const dailyOrdersMonthlyRows = historyData.filter(item =>
-        item.source === "daily" && item.uploadDate.startsWith(monthPrefix)
-      );
-
-      const fbaDailyRows = historyData.filter(item =>
-        item.source === "fba" && item.uploadDate === selectedDate
-      );
-      const fbaMonthlyRows = historyData.filter(item =>
-        item.source === "fba" && item.uploadDate.startsWith(monthPrefix)
-      );
-
-      const combinedDailyRows = historyData.filter(item =>
-        item.uploadDate === selectedDate
-      );
-      const combinedMonthlyRows = historyData.filter(item =>
-        item.uploadDate.startsWith(monthPrefix)
-      );
-
-      renderSimpleTable(dailyOrdersDailyWrap, buildSizeTotals(dailyOrdersDailyRows), "SIZE", "QUANTITY");
-      renderSimpleTable(dailyOrdersMonthlyWrap, buildSizeTotals(dailyOrdersMonthlyRows), "SIZE", "QUANTITY");
-      renderSimpleTable(fbaDailyWrap, buildSizeTotals(fbaDailyRows), "SIZE", "QUANTITY");
-      renderSimpleTable(fbaMonthlyWrap, buildSizeTotals(fbaMonthlyRows), "SIZE", "QUANTITY");
-      renderSimpleTable(combinedDailyWrap, buildSizeTotals(combinedDailyRows), "SIZE", "QUANTITY");
-      renderSimpleTable(combinedMonthlyWrap, buildSizeTotals(combinedMonthlyRows), "SIZE", "QUANTITY");
-
-      dailySummary.textContent = buildSourceSummary(dailyOrdersDailyRows, dailyOrdersMonthlyRows);
-      fbaSummary.textContent = buildSourceSummary(fbaDailyRows, fbaMonthlyRows);
-      totalSummary.textContent = buildSourceSummary(combinedDailyRows, combinedMonthlyRows);
-    }
-
-    function removeDailyData() {
-      const ok = confirm("Remove all stored Daily Orders data?");
-      if (!ok) return;
-
-      historyData = historyData.filter(item => item.source !== "daily");
-      if (latestProcessedData.length && latestProcessedData[0]?.source === "daily") {
-        latestProcessedData = [];
-      }
-
-      saveState();
-      renderDashboard();
-      statusEl.textContent = "Daily Orders data removed.";
-    }
-
-    function removeFbaData() {
-      const ok = confirm("Remove all stored Amazon FBA data?");
-      if (!ok) return;
-
-      historyData = historyData.filter(item => item.source !== "fba");
-      if (latestProcessedData.length && latestProcessedData[0]?.source === "fba") {
-        latestProcessedData = [];
-      }
-
-      saveState();
-      renderDashboard();
-      statusEl.textContent = "Amazon FBA data removed.";
-    }
-
-    function removeAllData() {
-      const ok = confirm("Remove all stored data?");
-      if (!ok) return;
-
-      historyData = [];
-      latestProcessedData = [];
-
-      saveState();
-      renderDashboard();
-      statusEl.textContent = "All data removed.";
-    }
-
-    function saveState() {
-      localStorage.setItem("salesHistory", JSON.stringify(historyData));
-      localStorage.setItem("latestProcessedData", JSON.stringify(latestProcessedData));
-    }
-
-    renderDashboard();
-  </script>
-</body>
-</html>
+  );
+}
