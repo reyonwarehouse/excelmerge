@@ -9,237 +9,77 @@
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      font-family: Arial, Helvetica, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       background: #2b2b2b;
-      color: #f2f2f2;
+      font-family: Arial, Helvetica, sans-serif;
+      color: #fff;
     }
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 24px;
-    }
-    .title {
-      font-size: 32px;
-      font-weight: 700;
-      margin-bottom: 8px;
-    }
-    .subtitle {
-      color: #c7c7c7;
-      margin-bottom: 24px;
-    }
-    .grid {
-      display: grid;
-      grid-template-columns: 360px 1fr;
-      gap: 24px;
-    }
-    .card {
-      background: #1f1f1f;
-      border: 1px solid #444;
+    .upload-area {
+      width: min(520px, calc(100vw - 40px));
+      border: 2px dashed #6d6d6d;
       border-radius: 18px;
-      padding: 20px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.25);
-    }
-    .card h2 {
-      margin-top: 0;
-      font-size: 20px;
-      margin-bottom: 16px;
-    }
-    .upload-box {
-      border: 2px dashed #666;
-      border-radius: 16px;
-      padding: 28px;
+      padding: 48px 24px;
       text-align: center;
+      background: #232323;
       cursor: pointer;
-      transition: border-color 0.2s ease;
-      background: #272727;
+      transition: border-color 0.2s ease, transform 0.2s ease;
     }
-    .upload-box:hover {
-      border-color: #999;
+    .upload-area:hover {
+      border-color: #a0a0a0;
+      transform: translateY(-1px);
     }
-    .upload-box strong {
-      display: block;
-      font-size: 18px;
-      margin-bottom: 8px;
+    .upload-area h1 {
+      margin: 0 0 10px;
+      font-size: 28px;
     }
-    .upload-box span {
-      color: #bbb;
-      font-size: 14px;
+    .upload-area p {
+      margin: 0;
+      color: #cfcfcf;
+      font-size: 15px;
+      line-height: 1.5;
     }
     input[type="file"] {
       display: none;
     }
-    .status, .saved-at {
+    .status {
+      margin-top: 18px;
+      color: #d8d8d8;
       font-size: 14px;
-      margin-top: 14px;
-      color: #cfcfcf;
+      min-height: 20px;
     }
     .error {
-      color: #ff7b7b;
-      margin-top: 12px;
+      margin-top: 10px;
+      color: #ff8f8f;
       font-size: 14px;
-    }
-    .file-list {
-      margin-top: 16px;
-      max-height: 220px;
-      overflow: auto;
-      background: #2a2a2a;
-      border: 1px solid #3d3d3d;
-      border-radius: 12px;
-      padding: 12px;
-      font-size: 14px;
-      color: #d8d8d8;
-    }
-    .file-list .empty {
-      color: #8f8f8f;
-    }
-    .actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 16px;
-    }
-    button {
-      border: none;
-      border-radius: 12px;
-      padding: 12px 16px;
-      font-size: 14px;
-      font-weight: 700;
-      cursor: pointer;
-    }
-    .btn-primary {
-      background: #f2f2f2;
-      color: #111;
-    }
-    .btn-primary:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-    .btn-danger {
-      background: #a23636;
-      color: #fff;
-    }
-    .toolbar {
-      display: flex;
-      justify-content: space-between;
-      gap: 16px;
-      align-items: center;
-      margin-bottom: 16px;
-      flex-wrap: wrap;
-    }
-    .search {
-      width: 320px;
-      max-width: 100%;
-      padding: 12px 14px;
-      border-radius: 12px;
-      border: 1px solid #4a4a4a;
-      background: #2a2a2a;
-      color: white;
-      font-size: 14px;
-    }
-    .table-wrap {
-      overflow: auto;
-      border: 1px solid #444;
-      border-radius: 16px;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    thead {
-      background: #2d2d2d;
-    }
-    th, td {
-      text-align: left;
-      padding: 14px 16px;
-      border-bottom: 1px solid #393939;
-      font-size: 14px;
-    }
-    tbody tr:hover {
-      background: #2a2a2a;
-    }
-    .muted {
-      color: #bdbdbd;
-      font-size: 14px;
-    }
-    @media (max-width: 900px) {
-      .grid {
-        grid-template-columns: 1fr;
-      }
+      min-height: 20px;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="title">Excel SKU Birleştirici</div>
-    <div class="subtitle">Birden fazla Excel dosyasını yükle, aynı SKU olan ürünleri birleştir, toplamı QTY sütununda göster.</div>
+  <label class="upload-area" for="fileInput">
+    <h1>Excel Dosyalarını Yükle</h1>
+    <p>Bir veya birden fazla Excel dosyası seç.<br>Yükleme biter bitmez aynı SKU'lar birleştirilir ve dosya otomatik indirilir.</p>
+    <div class="status" id="status">Hazır</div>
+    <div class="error" id="error"></div>
+  </label>
 
-    <div class="grid">
-      <div class="card">
-        <h2>Dosya Yükleme</h2>
-
-        <label class="upload-box" for="fileInput">
-          <strong>Excel dosyalarını seç</strong>
-          <span>Aynı anda 3, 5, 10 veya daha fazla dosya seçebilirsin</span>
-        </label>
-        <input id="fileInput" type="file" accept=".xlsx,.xls,.csv" multiple />
-
-        <div class="status" id="status">Durum: Hazır</div>
-        <div class="saved-at" id="savedAt"></div>
-        <div class="error" id="error"></div>
-
-        <div class="file-list" id="fileList">
-          <div class="empty">Henüz dosya yüklenmedi</div>
-        </div>
-
-        <div class="actions">
-          <button class="btn-primary" id="downloadBtn" disabled>Excel İndir</button>
-          <button class="btn-danger" id="clearBtn">Temizle</button>
-        </div>
-      </div>
-
-      <div class="card">
-        <h2>Birleşmiş Sonuç</h2>
-
-        <div class="toolbar">
-          <input id="searchInput" class="search" type="text" placeholder="SKU ara..." />
-          <div class="muted">Toplam SKU: <strong id="totalCount">0</strong></div>
-        </div>
-
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>SKU</th>
-                <th>QTY</th>
-              </tr>
-            </thead>
-            <tbody id="tableBody">
-              <tr>
-                <td colspan="2" class="muted">Sonuç yok</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
+  <input id="fileInput" type="file" accept=".xlsx,.xls,.csv" multiple />
 
   <script>
-    const STORAGE_KEY = 'sku-merger-data-v1';
-
     const fileInput = document.getElementById('fileInput');
     const statusEl = document.getElementById('status');
-    const savedAtEl = document.getElementById('savedAt');
     const errorEl = document.getElementById('error');
-    const fileListEl = document.getElementById('fileList');
-    const downloadBtn = document.getElementById('downloadBtn');
-    const clearBtn = document.getElementById('clearBtn');
-    const tableBody = document.getElementById('tableBody');
-    const totalCountEl = document.getElementById('totalCount');
-    const searchInput = document.getElementById('searchInput');
 
-    let uploadedFiles = [];
-    let mergedRows = [];
+    function setStatus(text) {
+      statusEl.textContent = text;
+    }
+
+    function setError(text) {
+      errorEl.textContent = text || '';
+    }
 
     function normalizeHeader(value) {
       return String(value || '')
@@ -252,9 +92,7 @@
       const normalizedHeaders = headers.map(normalizeHeader);
       for (const target of targets) {
         const index = normalizedHeaders.indexOf(normalizeHeader(target));
-        if (index !== -1) {
-          return headers[index];
-        }
+        if (index !== -1) return headers[index];
       }
       return null;
     }
@@ -262,99 +100,12 @@
     function toNumber(value) {
       if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
       const cleaned = String(value || '').replace(/,/g, '').trim();
-      const num = Number(cleaned);
-      return Number.isFinite(num) ? num : 0;
-    }
-
-    function setStatus(text) {
-      statusEl.textContent = 'Durum: ' + text;
-    }
-
-    function setError(text) {
-      errorEl.textContent = text || '';
-    }
-
-    function persist() {
-      const payload = {
-        uploadedFiles,
-        mergedRows,
-        lastSavedAt: new Date().toLocaleString()
-      };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-      savedAtEl.textContent = 'Son kayıt: ' + payload.lastSavedAt;
-    }
-
-    function renderFiles() {
-      if (!uploadedFiles.length) {
-        fileListEl.innerHTML = '<div class="empty">Henüz dosya yüklenmedi</div>';
-        return;
-      }
-      fileListEl.innerHTML = uploadedFiles.map(name => `<div>• ${escapeHtml(name)}</div>`).join('');
-    }
-
-    function renderTable() {
-      const q = searchInput.value.trim().toLowerCase();
-      const filtered = !q
-        ? mergedRows
-        : mergedRows.filter(row => String(row.SKU).toLowerCase().includes(q));
-
-      totalCountEl.textContent = String(filtered.length);
-      downloadBtn.disabled = mergedRows.length === 0;
-
-      if (!filtered.length) {
-        tableBody.innerHTML = '<tr><td colspan="2" class="muted">Sonuç yok</td></tr>';
-        return;
-      }
-
-      tableBody.innerHTML = filtered.map(row => `
-        <tr>
-          <td>${escapeHtml(String(row.SKU))}</td>
-          <td>${escapeHtml(String(row.QTY))}</td>
-        </tr>
-      `).join('');
-    }
-
-    function escapeHtml(str) {
-      return str
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-    }
-
-    function mergeRows(allRows) {
-      if (!allRows.length) return [];
-
-      const firstHeaders = Object.keys(allRows[0] || {});
-      const skuColumn = findColumn(firstHeaders, ['SKU', 'STOCK KEEPING UNIT', 'ITEM SKU', 'PRODUCT SKU']);
-      const qtyColumn = findColumn(firstHeaders, ['QTY', 'QUANTITY', 'ADET', 'MİKTAR', 'MIKTAR']);
-
-      if (!skuColumn || !qtyColumn) {
-        throw new Error('Excel dosyasında SKU ve QTY kolonları bulunamadı. Kolon adları SKU ve QTY olmalı.');
-      }
-
-      const map = new Map();
-
-      for (const row of allRows) {
-        const sku = String(row[skuColumn] || '').trim();
-        if (!sku) continue;
-
-        const qty = toNumber(row[qtyColumn]);
-
-        if (!map.has(sku)) {
-          map.set(sku, { SKU: sku, QTY: qty });
-        } else {
-          map.get(sku).QTY += qty;
-        }
-      }
-
-      return Array.from(map.values()).sort((a, b) => String(a.SKU).localeCompare(String(b.SKU)));
+      const parsed = Number(cleaned);
+      return Number.isFinite(parsed) ? parsed : 0;
     }
 
     async function readExcelFiles(files) {
       const allRows = [];
-      const fileNames = [];
 
       for (const file of files) {
         const buffer = await file.arrayBuffer();
@@ -365,89 +116,71 @@
           defval: '',
           raw: false,
         });
-
         allRows.push(...json);
-        fileNames.push(file.name);
       }
 
-      return { allRows, fileNames };
+      return allRows;
+    }
+
+    function mergeRows(allRows) {
+      if (!allRows.length) throw new Error('Dosyalarda veri bulunamadı.');
+
+      const headers = Object.keys(allRows[0] || {});
+      const skuColumn = findColumn(headers, ['SKU', 'STOCK KEEPING UNIT', 'ITEM SKU', 'PRODUCT SKU']);
+      const qtyColumn = findColumn(headers, ['QTY', 'QUANTITY', 'ADET', 'MIKTAR', 'MİKTAR']);
+
+      if (!skuColumn || !qtyColumn) {
+        throw new Error('SKU ve QTY kolonları bulunamadı.');
+      }
+
+      const grouped = new Map();
+
+      for (const row of allRows) {
+        const sku = String(row[skuColumn] || '').trim();
+        if (!sku) continue;
+
+        const qty = toNumber(row[qtyColumn]);
+
+        if (!grouped.has(sku)) {
+          grouped.set(sku, { SKU: sku, QTY: qty });
+        } else {
+          grouped.get(sku).QTY += qty;
+        }
+      }
+
+      return Array.from(grouped.values()).sort((a, b) => String(a.SKU).localeCompare(String(b.SKU)));
+    }
+
+    function downloadMergedExcel(rows) {
+      const worksheet = XLSX.utils.json_to_sheet(rows);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Merged');
+      XLSX.writeFile(workbook, 'merged_sku_qty.xlsx');
     }
 
     async function handleFiles(files) {
       if (!files.length) return;
 
       setError('');
-      setStatus('Dosyalar okunuyor...');
+      setStatus('Dosyalar işleniyor...');
 
       try {
-        const { allRows, fileNames } = await readExcelFiles(files);
-        uploadedFiles = fileNames;
-        mergedRows = mergeRows(allRows);
-        persist();
-        renderFiles();
-        renderTable();
-        setStatus(files.length + ' dosya birleştirildi');
-      } catch (err) {
-        setError(err.message || 'Bir hata oluştu');
+        const allRows = await readExcelFiles(files);
+        const mergedRows = mergeRows(allRows);
+        setStatus('İndirme başlatılıyor...');
+        downloadMergedExcel(mergedRows);
+        setStatus('Tamamlandı. Yeni dosya indirildi.');
+      } catch (error) {
         setStatus('Hata');
-      }
-    }
-
-    function clearAll() {
-      localStorage.removeItem(STORAGE_KEY);
-      uploadedFiles = [];
-      mergedRows = [];
-      searchInput.value = '';
-      setError('');
-      setStatus('Temizlendi');
-      savedAtEl.textContent = '';
-      renderFiles();
-      renderTable();
-    }
-
-    function exportExcel() {
-      if (!mergedRows.length) return;
-      const worksheet = XLSX.utils.json_to_sheet(mergedRows);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Merged');
-      XLSX.writeFile(workbook, 'merged_sku_qty.xlsx');
-    }
-
-    function loadSavedData() {
-      try {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (!saved) {
-          renderFiles();
-          renderTable();
-          return;
-        }
-        const parsed = JSON.parse(saved);
-        uploadedFiles = parsed.uploadedFiles || [];
-        mergedRows = parsed.mergedRows || [];
-        if (parsed.lastSavedAt) {
-          savedAtEl.textContent = 'Son kayıt: ' + parsed.lastSavedAt;
-        }
-        if (mergedRows.length) {
-          setStatus('Kaydedilmiş veri yüklendi');
-        }
-        renderFiles();
-        renderTable();
-      } catch (e) {
-        renderFiles();
-        renderTable();
-        setStatus('Kaydedilmiş veri okunamadı');
+        setError(error.message || 'Bir hata oluştu.');
+      } finally {
+        fileInput.value = '';
       }
     }
 
     fileInput.addEventListener('change', (e) => {
       handleFiles(Array.from(e.target.files || []));
     });
-
-    searchInput.addEventListener('input', renderTable);
-    clearBtn.addEventListener('click', clearAll);
-    downloadBtn.addEventListener('click', exportExcel);
-
-    loadSavedData();
   </script>
 </body>
 </html>
