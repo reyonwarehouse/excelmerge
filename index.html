@@ -1,282 +1,660 @@
-import React, { useEffect, useMemo, useState } from "react";
-import * as XLSX from "xlsx";
-import { Upload, Trash2, Download, Database, FileSpreadsheet } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>minocean</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; background: #161618; overflow: hidden; cursor: none; -webkit-font-smoothing: antialiased; font-family: 'Inter', sans-serif; }
+#cur { position: fixed; pointer-events: none; z-index: 9999; transform: translate(-50%,-50%); opacity: 0; transition: opacity 0.3s; }
+#c-ring { position: absolute; width: 30px; height: 30px; border-radius: 50%; border: 0.5px solid rgba(255,255,255,0.15); top: 50%; left: 50%; transform: translate(-50%,-50%); transition: border-color 0.2s; }
+#c-dot { position: absolute; width: 2px; height: 2px; border-radius: 50%; background: rgba(255,255,255,0.4); top: 50%; left: 50%; transform: translate(-50%,-50%); transition: background 0.2s; }
+#c-pulse { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: rgba(255,255,255,0.55); top: 50%; left: calc(50% + 15px); transform: translate(-50%,-50%); animation: pulse 2s ease-in-out infinite; transition: background 0.2s; }
+#cur.on-pdf #c-ring { border-color: rgba(0,0,0,0.25); }
+#cur.on-pdf #c-dot { background: rgba(0,0,0,0.45); }
+#cur.on-pdf #c-pulse { background: rgba(0,0,0,0.3); }
+@keyframes pulse { 0%{opacity:0.05;transform:translate(-50%,-50%) scale(0.6);}50%{opacity:0.7;transform:translate(-50%,-50%) scale(1.2);}100%{opacity:0.05;transform:translate(-50%,-50%) scale(0.6);} }
 
-const STORAGE_KEY = "sku-merger-data-v1";
+#info-btn { position: fixed; top: 20px; right: 20px; width: 22px; height: 22px; border-radius: 50%; border: 0.5px solid rgba(255,255,255,0.12); background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 500; opacity: 0.25; transition: opacity 0.2s; }
+#info-btn:hover { opacity: 0.7; }
+#info-panel { position: fixed; top: 52px; right: 20px; background: #1e1e20; border: 0.5px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 20px; width: 220px; z-index: 400; opacity: 0; transform: scale(0.95) translateY(-4px); transform-origin: top right; transition: opacity 0.15s, transform 0.15s; pointer-events: none; box-shadow: 0 16px 48px rgba(0,0,0,0.5); }
+#info-panel.on { opacity: 1; transform: scale(1) translateY(0); pointer-events: all; }
+.info-title { font-size: 10px; font-weight: 400; color: rgba(235,235,245,0.25); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 14px; }
+.info-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 11px; }
+.info-row:last-child { margin-bottom: 0; }
+.info-action { font-size: 12px; font-weight: 300; color: rgba(235,235,245,0.45); }
+.info-key { font-size: 11px; font-weight: 300; color: rgba(235,235,245,0.2); background: rgba(255,255,255,0.05); border: 0.5px solid rgba(255,255,255,0.08); border-radius: 5px; padding: 2px 7px; white-space: nowrap; }
 
-function normalizeHeader(value) {
-  return String(value ?? "")
-    .trim()
-    .toUpperCase()
-    .replace(/\s+/g, " ");
-}
+/* canvas menu */
+#menu { position: fixed; background: #1e1e20; border: 0.5px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 4px 0; width: 160px; z-index: 600; opacity: 0; transform: scale(0.96); transform-origin: top left; transition: opacity 0.12s, transform 0.12s; pointer-events: none; box-shadow: 0 20px 60px rgba(0,0,0,0.55); }
+#menu.on { opacity: 1; transform: scale(1); pointer-events: all; }
+.mi { padding: 7px 14px; font-size: 12px; font-weight: 300; color: rgba(235,235,245,0.6); display: flex; align-items: center; gap: 10px; cursor: default; letter-spacing: 0.02em; transition: background 0.1s, color 0.1s; }
+.mi:hover { background: rgba(255,255,255,0.04); color: rgba(235,235,245,0.9); }
+.mi svg { opacity: 0.4; flex-shrink: 0; }
+.mi:hover svg { opacity: 0.7; }
+.mi.danger { color: rgba(235,100,100,0.6); }
+.mi.danger:hover { background: rgba(255,80,80,0.05); color: rgba(235,100,100,0.9); }
+.mi.danger svg { opacity: 0.5; }
+.ms { height: 0.5px; background: rgba(255,255,255,0.06); margin: 3px 0; }
 
-function findColumn(headers, targets) {
-  const normalized = headers.map(normalizeHeader);
-  for (const target of targets) {
-    const idx = normalized.indexOf(normalizeHeader(target));
-    if (idx !== -1) return headers[idx];
-  }
-  return null;
-}
+/* dot context menu */
+#dot-menu { position: fixed; background: #1e1e20; border: 0.5px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 4px 0; width: 120px; z-index: 700; opacity: 0; transform: scale(0.96); transform-origin: top left; transition: opacity 0.12s, transform 0.12s; pointer-events: none; box-shadow: 0 16px 48px rgba(0,0,0,0.5); }
+#dot-menu.on { opacity: 1; transform: scale(1); pointer-events: all; }
 
-function toNumber(value) {
-  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
-  const cleaned = String(value ?? "")
-    .replace(/,/g, "")
-    .trim();
-  const parsed = Number(cleaned);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
+/* session dots */
+.sdot { position: fixed; transform: translate(-50%,-50%); z-index: 10; cursor: pointer; }
+.sdot-core { width: 9px; height: 9px; border-radius: 50%; background: rgba(255,255,255,0.25); transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease; }
+.sdot-ring { position: absolute; top: 50%; left: 50%; width: 24px; height: 24px; border-radius: 50%; border: 1px solid rgba(255,255,255,0); transform: translate(-50%,-50%); transition: border-color 0.2s ease; pointer-events: none; }
+.sdot:hover .sdot-core { transform: scale(1.6); background: rgba(255,255,255,0.55); }
+.sdot.selected .sdot-core { transform: scale(1.8); background: rgba(255,255,255,0.8); box-shadow: 0 0 10px rgba(255,255,255,0.18); }
+.sdot.selected .sdot-ring { border-color: rgba(255,255,255,0.22); }
+.sdot-label { position: absolute; left: 50%; bottom: calc(100% + 12px); transform: translateX(-50%); background: #1e1e20; border: 0.5px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 4px 10px; font-size: 11px; font-weight: 300; color: rgba(235,235,245,0.55); white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.15s; }
+.sdot:hover .sdot-label { opacity: 1; }
+.sdot.selected .sdot-label { opacity: 1; }
 
-function mergeRows(allRows) {
-  if (!allRows.length) {
-    return { merged: [], skuColumn: null, qtyColumn: null };
-  }
+#save-flash { position: fixed; inset: 0; background: rgba(255,255,255,0); pointer-events: none; z-index: 9990; transition: background 0.06s; }
 
-  const firstHeaders = Object.keys(allRows[0] || {});
-  const skuColumn = findColumn(firstHeaders, ["SKU", "STOCK KEEPING UNIT", "ITEM SKU", "PRODUCT SKU"]);
-  const qtyColumn = findColumn(firstHeaders, ["QTY", "QUANTITY", "ADET", "MİKTAR", "MIKTAR"]);
+/* toast */
+#toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(6px); background: #1e1e20; border: 0.5px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 7px 14px; display: flex; align-items: center; gap: 10px; font-size: 11px; font-weight: 300; color: rgba(235,235,245,0.35); letter-spacing: 0.03em; opacity: 0; pointer-events: none; transition: opacity 0.3s, transform 0.3s; z-index: 800; white-space: nowrap; }
+#toast.on { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: all; }
+#toast-undo { color: rgba(235,235,245,0.65); cursor: pointer; padding: 2px 8px; border-radius: 4px; background: rgba(255,255,255,0.06); border: 0.5px solid rgba(255,255,255,0.1); transition: background 0.15s; }
+#toast-undo:hover { background: rgba(255,255,255,0.1); }
 
-  if (!skuColumn || !qtyColumn) {
-    throw new Error("Excel dosyasında SKU ve QTY kolonları bulunamadı. Lütfen kolon adları SKU ve QTY olsun.");
-  }
+/* pdf card */
+#pdf-card { position: fixed; background: #1a1a1c; border: 0.5px solid rgba(255,255,255,0.1); border-radius: 12px; display: none; flex-direction: column; z-index: 300; overflow: hidden; min-width: 300px; min-height: 200px; }
+#pdf-card.open { display: flex; }
+.pdf-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 0.5px solid rgba(255,255,255,0.06); cursor: move; flex-shrink: 0; user-select: none; gap: 12px; background: #1a1a1c; position: relative; z-index: 2; }
+.pdf-name { font-size: 11px; font-weight: 300; color: rgba(235,235,245,0.3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1; }
+.pdf-controls { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.page-nav { display: flex; align-items: center; gap: 6px; }
+.nav-btn { width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; border-radius: 4px; cursor: pointer; opacity: 0.35; transition: opacity 0.15s; border: none; background: none; }
+.nav-btn:hover { opacity: 0.8; }
+.nav-btn:disabled { opacity: 0.1; cursor: default; }
+.page-num { font-size: 10px; font-weight: 300; color: rgba(235,235,245,0.3); min-width: 36px; text-align: center; }
+.vsep { width: 0.5px; height: 14px; background: rgba(255,255,255,0.08); }
+.tool-btn { width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border-radius: 5px; cursor: pointer; opacity: 0.3; transition: opacity 0.15s, background 0.15s; border: none; background: none; }
+.tool-btn:hover { opacity: 0.8; background: rgba(255,255,255,0.05); }
+.tool-btn.active { opacity: 1; background: rgba(255,255,255,0.08); }
+.pdf-close { width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; opacity: 0.2; transition: opacity 0.15s; border: none; background: none; border-radius: 50%; }
+.pdf-close:hover { opacity: 0.7; }
+.pdf-body { flex: 1; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+#pdf-canvas { display: block; flex-shrink: 0; position: relative; z-index: 1; }
+#annot-svg { position: absolute; pointer-events: none; z-index: 2; }
+#draw-canvas { position: absolute; z-index: 3; }
+.pdf-footer { display: flex; gap: 2px; padding: 7px 14px; flex-shrink: 0; border-top: 0.5px solid rgba(255,255,255,0.04); background: #1a1a1c; position: relative; z-index: 2; }
+.tab { font-size: 10px; font-weight: 300; color: rgba(235,235,245,0.2); letter-spacing: 0.06em; padding: 3px 8px; border-radius: 4px; cursor: pointer; transition: all 0.15s; text-transform: uppercase; border: none; background: none; }
+.tab:hover { color: rgba(235,235,245,0.5); background: rgba(255,255,255,0.04); }
+.tab.active { color: rgba(235,235,245,0.7); background: rgba(255,255,255,0.06); }
+.rh { position: absolute; width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.2); background: #1a1a1c; z-index: 10; }
+.rh.tl { top:-6px; left:-6px; cursor:nwse-resize; }
+.rh.tr { top:-6px; right:-6px; cursor:nesw-resize; }
+.rh.bl { bottom:-6px; left:-6px; cursor:nesw-resize; }
+.rh.br { bottom:-6px; right:-6px; cursor:nwse-resize; }
+#file-input { display: none; }
+</style>
+</head>
+<body>
 
-  const map = new Map();
+<div id="cur"><div id="c-ring"></div><div id="c-dot"></div><div id="c-pulse"></div></div>
+<div id="save-flash"></div>
+<input type="file" id="file-input" accept=".pdf">
 
-  for (const row of allRows) {
-    const sku = String(row[skuColumn] ?? "").trim();
-    if (!sku) continue;
+<button id="info-btn" onclick="toggleInfo()">
+  <svg width="8" height="12" viewBox="0 0 8 12" fill="none">
+    <circle cx="4" cy="1.5" r="1" fill="rgba(235,235,245,0.6)"/>
+    <path d="M4 5v6" stroke="rgba(235,235,245,0.6)" stroke-width="1.2" stroke-linecap="round"/>
+  </svg>
+</button>
 
-    const qty = toNumber(row[qtyColumn]);
+<div id="info-panel">
+  <div class="info-title">shortcuts</div>
+  <div class="info-row"><span class="info-action">open menu</span><span class="info-key">right click</span></div>
+  <div class="info-row"><span class="info-action">save session</span><span class="info-key">⌘S</span></div>
+  <div class="info-row"><span class="info-action">open session</span><span class="info-key">double click</span></div>
+  <div class="info-row"><span class="info-action">delete selected</span><span class="info-key">delete</span></div>
+  <div class="info-row"><span class="info-action">next / prev page</span><span class="info-key">← →</span></div>
+  <div class="info-row"><span class="info-action">close</span><span class="info-key">esc</span></div>
+</div>
 
-    if (!map.has(sku)) {
-      map.set(sku, {
-        SKU: sku,
-        QTY: qty,
-      });
-    } else {
-      const current = map.get(sku);
-      current.QTY += qty;
-    }
-  }
+<!-- canvas right-click menu -->
+<div id="menu">
+  <div class="mi" onclick="act('pdf')">
+    <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1" y="1" width="11" height="11" rx="1.5" stroke="currentColor" stroke-width="0.8"/><path d="M3 4.5h7M3 6.5h7M3 8.5h4" stroke="currentColor" stroke-width="0.8"/></svg>
+    <span>add pdf</span>
+  </div>
+</div>
 
-  const merged = Array.from(map.values()).sort((a, b) => a.SKU.localeCompare(b.SKU));
-  return { merged, skuColumn, qtyColumn };
-}
+<!-- dot right-click menu -->
+<div id="dot-menu">
+  <div class="mi" id="dm-open">
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6h8M6 2v8" stroke="currentColor" stroke-width="0.9" stroke-linecap="round"/></svg>
+    <span>open</span>
+  </div>
+  <div class="ms"></div>
+  <div class="mi danger" id="dm-delete">
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 3h8M5 3V2h2v1M4 3v6h4V3" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span>delete</span>
+  </div>
+</div>
 
-async function readExcelFiles(files) {
-  const allRows = [];
-  const fileNames = [];
-
-  for (const file of files) {
-    const buffer = await file.arrayBuffer();
-    const workbook = XLSX.read(buffer, { type: "array" });
-    const firstSheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[firstSheetName];
-    const json = XLSX.utils.sheet_to_json(worksheet, {
-      defval: "",
-      raw: false,
-    });
-
-    allRows.push(...json);
-    fileNames.push(file.name);
-  }
-
-  return { allRows, fileNames };
-}
-
-export default function ExcelSkuMergerApp() {
-  const [uploadedFiles, setUploadedFiles] = useState([]);
-  const [mergedRows, setMergedRows] = useState([]);
-  const [status, setStatus] = useState("Hazır");
-  const [error, setError] = useState("");
-  const [search, setSearch] = useState("");
-  const [lastSavedAt, setLastSavedAt] = useState("");
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (!saved) return;
-      const parsed = JSON.parse(saved);
-      setUploadedFiles(parsed.uploadedFiles || []);
-      setMergedRows(parsed.mergedRows || []);
-      setLastSavedAt(parsed.lastSavedAt || "");
-      setStatus(parsed.mergedRows?.length ? "Kaydedilmiş veri yüklendi" : "Hazır");
-    } catch {
-      setStatus("Kaydedilmiş veri okunamadı");
-    }
-  }, []);
-
-  const filteredRows = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return mergedRows;
-    return mergedRows.filter((row) => String(row.SKU).toLowerCase().includes(q));
-  }, [mergedRows, search]);
-
-  function persist(nextFiles, nextRows) {
-    const payload = {
-      uploadedFiles: nextFiles,
-      mergedRows: nextRows,
-      lastSavedAt: new Date().toLocaleString(),
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-    setLastSavedAt(payload.lastSavedAt);
-  }
-
-  async function handleFileChange(event) {
-    const files = Array.from(event.target.files || []);
-    if (!files.length) return;
-
-    setError("");
-    setStatus("Dosyalar okunuyor...");
-
-    try {
-      const { allRows, fileNames } = await readExcelFiles(files);
-      const { merged } = mergeRows(allRows);
-      setUploadedFiles(fileNames);
-      setMergedRows(merged);
-      persist(fileNames, merged);
-      setStatus(`${files.length} dosya birleştirildi`);
-    } catch (err) {
-      setError(err.message || "Bir hata oluştu");
-      setStatus("Hata");
-    }
-  }
-
-  function clearAll() {
-    localStorage.removeItem(STORAGE_KEY);
-    setUploadedFiles([]);
-    setMergedRows([]);
-    setSearch("");
-    setError("");
-    setLastSavedAt("");
-    setStatus("Temizlendi");
-  }
-
-  function exportExcel() {
-    if (!mergedRows.length) return;
-    const worksheet = XLSX.utils.json_to_sheet(mergedRows);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Merged");
-    XLSX.writeFile(workbook, "merged_sku_qty.xlsx");
-  }
-
-  return (
-    <div className="min-h-screen bg-neutral-800 text-white p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">Excel SKU Birleştirici</h1>
-          <p className="text-neutral-300 text-sm">
-            Birden fazla Excel dosyası yükle, aynı SKU olan ürünleri topla, toplamı QTY alanında göster.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Card className="bg-neutral-900 border-neutral-700 text-white lg:col-span-1 rounded-2xl shadow-xl">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Upload className="w-5 h-5" /> Dosya Yükleme
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <label className="block border-2 border-dashed border-neutral-600 rounded-2xl p-6 cursor-pointer hover:border-neutral-400 transition">
-                <div className="flex flex-col items-center justify-center text-center gap-3">
-                  <FileSpreadsheet className="w-10 h-10 text-neutral-300" />
-                  <div>
-                    <div className="font-medium">Excel dosyalarını seç</div>
-                    <div className="text-sm text-neutral-400">Aynı anda 3, 5, 10 veya daha fazla dosya seçebilirsin</div>
-                  </div>
-                </div>
-                <input
-                  type="file"
-                  accept=".xlsx,.xls,.csv"
-                  multiple
-                  className="hidden"
-                  onChange={handleFileChange}
-                />
-              </label>
-
-              <div className="text-sm space-y-2">
-                <div className="flex items-center gap-2 text-neutral-300">
-                  <Database className="w-4 h-4" /> Durum: {status}
-                </div>
-                {lastSavedAt ? <div className="text-neutral-400">Son kayıt: {lastSavedAt}</div> : null}
-                {error ? <div className="text-red-400">{error}</div> : null}
-              </div>
-
-              <div className="space-y-2">
-                <div className="text-sm font-medium text-neutral-300">Yüklenen dosyalar</div>
-                <div className="max-h-48 overflow-auto rounded-xl bg-neutral-800 p-3 text-sm text-neutral-300 space-y-1">
-                  {uploadedFiles.length ? (
-                    uploadedFiles.map((name, idx) => <div key={`${name}-${idx}`}>• {name}</div>)
-                  ) : (
-                    <div className="text-neutral-500">Henüz dosya yüklenmedi</div>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                <Button onClick={exportExcel} disabled={!mergedRows.length} className="rounded-xl">
-                  <Download className="w-4 h-4 mr-2" /> Excel İndir
-                </Button>
-                <Button onClick={clearAll} variant="destructive" className="rounded-xl">
-                  <Trash2 className="w-4 h-4 mr-2" /> Temizle
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-neutral-900 border-neutral-700 text-white lg:col-span-2 rounded-2xl shadow-xl">
-            <CardHeader>
-              <CardTitle>Birleşmiş Sonuç</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-                <Input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="SKU ara..."
-                  className="bg-neutral-800 border-neutral-700 text-white placeholder:text-neutral-500"
-                />
-                <div className="text-sm text-neutral-400">
-                  Toplam SKU: <span className="text-white font-semibold">{filteredRows.length}</span>
-                </div>
-              </div>
-
-              <div className="overflow-auto rounded-2xl border border-neutral-700">
-                <table className="w-full text-sm">
-                  <thead className="bg-neutral-800 text-neutral-200">
-                    <tr>
-                      <th className="text-left px-4 py-3 border-b border-neutral-700">SKU</th>
-                      <th className="text-left px-4 py-3 border-b border-neutral-700">QTY</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredRows.length ? (
-                      filteredRows.map((row) => (
-                        <tr key={row.SKU} className="border-b border-neutral-800 hover:bg-neutral-800/70">
-                          <td className="px-4 py-3">{row.SKU}</td>
-                          <td className="px-4 py-3">{row.QTY}</td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={2} className="px-4 py-8 text-center text-neutral-500">
-                          Sonuç yok
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+<div id="pdf-card">
+  <div class="rh tl" data-corner="tl"></div>
+  <div class="rh tr" data-corner="tr"></div>
+  <div class="rh bl" data-corner="bl"></div>
+  <div class="rh br" data-corner="br"></div>
+  <div class="pdf-header" id="pdf-header">
+    <span class="pdf-name" id="pdf-name">—</span>
+    <div class="pdf-controls">
+      <div class="page-nav">
+        <button class="nav-btn" id="prev-btn" onclick="changePage(-1)"><svg width="5" height="9" viewBox="0 0 5 9" fill="none"><path d="M4 1L1 4.5l3 3.5" stroke="rgba(235,235,245,0.7)" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <span class="page-num" id="page-num">1 / 1</span>
+        <button class="nav-btn" id="next-btn" onclick="changePage(1)"><svg width="5" height="9" viewBox="0 0 5 9" fill="none"><path d="M1 1l3 3.5L1 8" stroke="rgba(235,235,245,0.7)" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       </div>
+      <div class="vsep"></div>
+      <button class="tool-btn active" id="tool-highlight" onclick="setTool('highlight')"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1" y="4" width="11" height="4" rx="1" fill="rgba(255,210,50,0.5)"/><path d="M1 10h11" stroke="rgba(235,235,245,0.5)" stroke-width="0.8"/></svg></button>
+      <button class="tool-btn" id="tool-arrow" onclick="setTool('arrow')"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 11L10 3" stroke="rgba(235,235,245,0.6)" stroke-width="1" stroke-linecap="round"/><path d="M6 3h4v4" stroke="rgba(235,235,245,0.6)" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <button class="tool-btn" id="tool-note" onclick="setTool('note')"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1" y="1" width="11" height="9" rx="2" stroke="rgba(235,235,245,0.6)" stroke-width="0.8"/><path d="M3.5 4.5h6M3.5 6.5h4" stroke="rgba(235,235,245,0.6)" stroke-width="0.8"/></svg></button>
+      <div class="vsep"></div>
+      <button class="pdf-close" onclick="closePdf()"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 1l6 6M7 1L1 7" stroke="rgba(235,235,245,0.5)" stroke-width="1" stroke-linecap="round"/></svg></button>
     </div>
-  );
+  </div>
+  <div class="pdf-body" id="pdf-body">
+    <canvas id="pdf-canvas"></canvas>
+    <svg id="annot-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+    <canvas id="draw-canvas"></canvas>
+  </div>
+  <div class="pdf-footer">
+    <button class="tab active" onclick="switchTab(this)">page</button>
+    <button class="tab" onclick="switchTab(this)">notes</button>
+    <button class="tab" onclick="switchTab(this)">arrows</button>
+  </div>
+</div>
+
+<div id="toast">session deleted <span id="toast-undo">undo</span></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+const SUPABASE_URL='https://mwpeuvmvlsdkivfyryoj.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im13cGV1dm12bHNka2l2ZnlyeW9qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMDMwMDgsImV4cCI6MjA5MTU3OTAwOH0.UYIM5pAcjvB3Ybqq5azVOStgo7AxmCUIFUqawoAHro8';
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+const cur=document.getElementById('cur'),menu=document.getElementById('menu'),infoPanel=document.getElementById('info-panel');
+const dotMenu=document.getElementById('dot-menu');
+const pdfCard=document.getElementById('pdf-card'),fileInput=document.getElementById('file-input');
+const pdfCanvas=document.getElementById('pdf-canvas'),drawCanvas=document.getElementById('draw-canvas'),annotSvg=document.getElementById('annot-svg');
+const pdfBody=document.getElementById('pdf-body'),saveFlash=document.getElementById('save-flash');
+const toast=document.getElementById('toast'),toastUndo=document.getElementById('toast-undo');
+
+let menuOn=false,infoOn=false,dotMenuOn=false;
+let pdfDoc=null,currentPage=1,totalPages=1,currentTool='highlight';
+let isDrawing=false,drawStartX=0,drawStartY=0,drawStartW=0,drawStartH=0,annotations={};
+let currentPdfFile=null,canvasW=0,canvasH=0;
+let menuX=window.innerWidth/2,menuY=window.innerHeight/2;
+let currentSessionId=null,currentDotEl=null;
+let selectedDot=null,activeDotSession=null;
+let toastTimer=null,deletedSession=null,deletedDotEl=null;
+let selectedAnnot=null;
+
+document.addEventListener('mousemove',e=>{
+  cur.style.left=e.clientX+'px';cur.style.top=e.clientY+'px';cur.style.opacity='1';
+  // dark cursor when over PDF white page
+  const el=document.elementFromPoint(e.clientX,e.clientY);
+  if(el&&(el===pdfCanvas||el===drawCanvas||el===annotSvg)){
+    cur.classList.add('on-pdf');
+  } else {
+    cur.classList.remove('on-pdf');
+  }
+});
+document.addEventListener('mouseleave',()=>{cur.style.opacity='0';});
+
+function toggleInfo(){infoOn=!infoOn;infoPanel.classList.toggle('on',infoOn);closeMenus();}
+
+function closeMenus(){
+  menu.classList.remove('on');menuOn=false;
+  dotMenu.classList.remove('on');dotMenuOn=false;
 }
+
+document.addEventListener('contextmenu',e=>{
+  e.preventDefault();
+  if(e.target.closest('.sdot'))return;
+  closeMenus();
+  if(infoOn){infoPanel.classList.remove('on');infoOn=false;}
+  menuX=e.clientX;menuY=e.clientY;
+  let x=e.clientX,y=e.clientY;
+  if(x+170>window.innerWidth)x=window.innerWidth-175;
+  if(y+70>window.innerHeight)y=window.innerHeight-75;
+  menu.style.left=x+'px';menu.style.top=y+'px';
+  menu.classList.add('on');menuOn=true;
+});
+
+document.addEventListener('click',e=>{
+  if(menuOn&&!menu.contains(e.target)){menu.classList.remove('on');menuOn=false;}
+  if(dotMenuOn&&!dotMenu.contains(e.target)){dotMenu.classList.remove('on');dotMenuOn=false;}
+  if(infoOn&&!infoPanel.contains(e.target)&&e.target.id!=='info-btn'){infoPanel.classList.remove('on');infoOn=false;}
+  if(!e.target.closest('.sdot')&&!e.target.closest('#dot-menu')){deselectDot();}
+});
+
+document.addEventListener('keydown',e=>{
+  if(e.code==='Escape'){
+    closeMenus();
+    if(infoOn){infoPanel.classList.remove('on');infoOn=false;return;}
+    if(selectedAnnot!==null){selectedAnnot=null;drawAnnotations(currentPage);return;}
+    deselectDot();
+  }
+  if(e.key==='ArrowLeft'&&pdfCard.classList.contains('open'))changePage(-1);
+  if(e.key==='ArrowRight'&&pdfCard.classList.contains('open'))changePage(1);
+  if((e.metaKey||e.ctrlKey)&&e.key==='s'){e.preventDefault();if(pdfCard.classList.contains('open'))saveSession();}
+  if((e.key==='Delete'||e.key==='Backspace')&&!e.target.matches('input,textarea')){
+    e.preventDefault();
+    if(selectedDot)deleteSession(selectedDot,activeDotSession);
+    else if(selectedAnnot!==null)deleteAnnot();
+  }
+});
+
+function deselectDot(){
+  if(selectedDot){selectedDot.classList.remove('selected');selectedDot=null;activeDotSession=null;}
+}
+
+function act(type){closeMenus();if(type==='pdf')fileInput.click();}
+
+fileInput.addEventListener('change',e=>{
+  const file=e.target.files[0];if(!file)return;
+  currentPdfFile=file;
+  currentSessionId=null;currentDotEl=null;
+  const reader=new FileReader();
+  reader.onload=ev=>loadPdf(ev.target.result,file.name);
+  reader.readAsArrayBuffer(file);fileInput.value='';
+});
+
+async function loadPdf(data,name,savedAnnotations){
+  try{
+    pdfDoc=await pdfjsLib.getDocument({data}).promise;
+    totalPages=pdfDoc.numPages;currentPage=1;
+    annotations=savedAnnotations||{};selectedAnnot=null;
+    document.getElementById('pdf-name').textContent=name;
+    const page=await pdfDoc.getPage(1);
+    const vp=page.getViewport({scale:1});
+    const aspect=vp.width/vp.height;
+    const headerH=42,footerH=34;
+    const maxW=Math.min(680,window.innerWidth*0.68);
+    const maxBodyH=Math.min(650,window.innerHeight*0.78)-headerH-footerH;
+    let bodyW=maxW,bodyH=bodyW/aspect;
+    if(bodyH>maxBodyH){bodyH=maxBodyH;bodyW=bodyH*aspect;}
+    const cardW=Math.round(bodyW),cardH=Math.round(bodyH+headerH+footerH);
+    let cardL=Math.round(menuX-cardW/2);
+    let cardT=Math.round(menuY-cardH/2);
+    cardL=Math.max(10,Math.min(cardL,window.innerWidth-cardW-10));
+    cardT=Math.max(10,Math.min(cardT,window.innerHeight-cardH-10));
+    pdfCard.style.width=cardW+'px';pdfCard.style.height=cardH+'px';
+    pdfCard.style.left=cardL+'px';pdfCard.style.top=cardT+'px';
+    pdfCard.classList.add('open');
+    await renderPage(1);
+  }catch(err){console.error(err);}
+}
+
+async function renderPage(num){
+  if(!pdfDoc)return;
+  const page=await pdfDoc.getPage(num);
+  const vp1=page.getViewport({scale:1});
+  const bw=pdfBody.clientWidth,bh=pdfBody.clientHeight;
+  const scale=Math.min(bw/vp1.width,bh/vp1.height);
+  const vp=page.getViewport({scale});
+  const pw=Math.floor(vp.width),ph=Math.floor(vp.height);
+  canvasW=pw;canvasH=ph;
+
+  pdfCanvas.width=pw;pdfCanvas.height=ph;
+  pdfCanvas.style.width=pw+'px';pdfCanvas.style.height=ph+'px';
+
+  drawCanvas.width=pw;drawCanvas.height=ph;
+  drawCanvas.style.width=pw+'px';drawCanvas.style.height=ph+'px';
+  drawCanvas.style.position='absolute';
+  drawCanvas.style.left='50%';drawCanvas.style.top='50%';
+  drawCanvas.style.transform='translate(-50%,-50%)';
+
+  annotSvg.style.width=pw+'px';annotSvg.style.height=ph+'px';
+  annotSvg.style.position='absolute';
+  annotSvg.style.left='50%';annotSvg.style.top='50%';
+  annotSvg.style.transform='translate(-50%,-50%)';
+  annotSvg.setAttribute('viewBox',`0 0 ${pw} ${ph}`);
+
+  const ctx=pdfCanvas.getContext('2d');
+  ctx.clearRect(0,0,pw,ph);
+  await page.render({canvasContext:ctx,viewport:vp}).promise;
+  document.getElementById('page-num').textContent=`${num} / ${totalPages}`;
+  document.getElementById('prev-btn').disabled=num<=1;
+  document.getElementById('next-btn').disabled=num>=totalPages;
+  selectedAnnot=null;drawAnnotations(num);updateLayerOrder();
+}
+
+function updateLayerOrder(){
+  // draw-canvas always on top - cursor changes by tool
+  drawCanvas.style.cursor = (currentTool==='highlight'||currentTool==='arrow') ? 'crosshair' : (currentTool==='note' ? 'text' : 'default');
+}
+
+function changePage(dir){const n=currentPage+dir;if(n<1||n>totalPages)return;currentPage=n;renderPage(currentPage);}
+function setTool(t){currentTool=t;['highlight','arrow','note'].forEach(id=>document.getElementById('tool-'+id).classList.toggle('active',id===t));}
+function switchTab(el){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');}
+
+function drawAnnotations(page){
+  annotSvg.innerHTML='';
+  const pw=canvasW,ph=canvasH;
+  (annotations[page]||[]).forEach((a,i)=>{
+    const sel=(selectedAnnot===i);
+    if(a.type==='highlight'){
+      const r=document.createElementNS('http://www.w3.org/2000/svg','rect');
+      r.setAttribute('x',a.x*pw);r.setAttribute('y',a.y*ph);r.setAttribute('width',a.w*pw);r.setAttribute('height',a.h*ph);
+      r.setAttribute('fill',sel?'rgba(255,150,50,0.5)':'rgba(255,210,50,0.35)');r.setAttribute('rx','1');
+      if(sel){r.setAttribute('stroke','rgba(255,130,30,0.8)');r.setAttribute('stroke-width','1.5');}
+      annotSvg.appendChild(r);
+    }else if(a.type==='arrow'){
+      const mid='a'+i+'p'+page;
+      const defs=document.createElementNS('http://www.w3.org/2000/svg','defs');
+      const mk=document.createElementNS('http://www.w3.org/2000/svg','marker');
+      mk.setAttribute('id',mid);mk.setAttribute('markerWidth','6');mk.setAttribute('markerHeight','6');mk.setAttribute('refX','3');mk.setAttribute('refY','3');mk.setAttribute('orient','auto');
+      const mp=document.createElementNS('http://www.w3.org/2000/svg','path');mp.setAttribute('d','M0,0 L0,6 L6,3 z');mp.setAttribute('fill',sel?'rgba(255,130,30,0.9)':'rgba(100,160,255,0.8)');
+      mk.appendChild(mp);defs.appendChild(mk);annotSvg.appendChild(defs);
+      const l=document.createElementNS('http://www.w3.org/2000/svg','line');
+      l.setAttribute('x1',a.x1*pw);l.setAttribute('y1',a.y1*ph);l.setAttribute('x2',a.x2*pw);l.setAttribute('y2',a.y2*ph);
+      l.setAttribute('stroke',sel?'rgba(255,130,30,0.9)':'rgba(100,160,255,0.7)');l.setAttribute('stroke-width',sel?'2.5':'1.5');
+      l.setAttribute('marker-end',`url(#${mid})`);
+      annotSvg.appendChild(l);
+    }
+  });
+}
+
+function deleteAnnot(){
+  if(selectedAnnot===null||!annotations[currentPage])return;
+  annotations[currentPage].splice(selectedAnnot,1);
+  selectedAnnot=null;drawAnnotations(currentPage);
+}
+
+drawCanvas.addEventListener('mousedown',e=>{
+  const rect=drawCanvas.getBoundingClientRect();
+  const mx=(e.clientX-rect.left)/rect.width;
+  const my=(e.clientY-rect.top)/rect.height;
+
+  if(currentTool==='note'){
+    const input=prompt('note:');
+    if(input){if(!annotations[currentPage])annotations[currentPage]=[];annotations[currentPage].push({type:'note',x:mx,y:my,text:input});drawAnnotations(currentPage);}
+    return;
+  }
+
+  if(currentTool==='highlight'||currentTool==='arrow'){
+    // check if clicking existing annotation to select it
+    const hit=hitTestAnnotation(mx,my);
+    if(hit!==-1){selectedAnnot=hit;drawAnnotations(currentPage);return;}
+    // otherwise start drawing
+    selectedAnnot=null;
+    isDrawing=true;
+    drawStartX=e.clientX-rect.left;drawStartY=e.clientY-rect.top;
+    return;
+  }
+});
+
+function hitTestAnnotation(mx,my){
+  const pageAnnots=annotations[currentPage]||[];
+  for(let i=pageAnnots.length-1;i>=0;i--){
+    const a=pageAnnots[i];
+    if(a.type==='highlight'){
+      if(mx>=a.x&&mx<=a.x+a.w&&my>=a.y&&my<=a.y+a.h)return i;
+    } else if(a.type==='arrow'){
+      // line hit test with tolerance
+      const dx=a.x2-a.x1,dy=a.y2-a.y1;
+      const len=Math.sqrt(dx*dx+dy*dy);
+      if(len<0.001)continue;
+      const t=((mx-a.x1)*dx+(my-a.y1)*dy)/(len*len);
+      const tc=Math.max(0,Math.min(1,t));
+      const px=a.x1+tc*dx,py=a.y1+tc*dy;
+      const dist=Math.sqrt((mx-px)**2+(my-py)**2);
+      if(dist<0.025)return i;
+    }
+  }
+  return -1;
+}
+drawCanvas.addEventListener('mousemove',e=>{
+  if(!isDrawing)return;
+  const rect=drawCanvas.getBoundingClientRect();
+  const x=e.clientX-rect.left,y=e.clientY-rect.top;
+  const scaleX=canvasW/rect.width,scaleY=canvasH/rect.height;
+  const sx=drawStartX*scaleX,sy=drawStartY*scaleY,ex=x*scaleX,ey=y*scaleY;
+  const ctx=drawCanvas.getContext('2d');ctx.clearRect(0,0,canvasW,canvasH);
+  if(currentTool==='highlight'){
+    const lineH=canvasH*0.022; // sabit satır yüksekliği
+    const ry=drawStartY*scaleY - lineH/2;
+    ctx.fillStyle='rgba(255,210,50,0.4)';
+    ctx.fillRect(Math.min(sx,ex), ry, Math.abs(ex-sx), lineH);
+  }
+  else if(currentTool==='arrow'){ctx.strokeStyle='rgba(100,160,255,0.7)';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(ex,ey);ctx.stroke();}
+});
+drawCanvas.addEventListener('mouseup',e=>{
+  if(!isDrawing)return;isDrawing=false;
+  const rect=drawCanvas.getBoundingClientRect();
+  const ex=e.clientX-rect.left,ey=e.clientY-rect.top;
+  if(!annotations[currentPage])annotations[currentPage]=[];
+  if(currentTool==='highlight'){
+    const lineH=0.022;
+    const x=Math.min(drawStartX,ex)/rect.width;
+    const y=drawStartY/rect.height - lineH/2;
+    const aw=Math.abs(ex-drawStartX)/rect.width;
+    if(aw>0.005)annotations[currentPage].push({type:'highlight',x,y,w:aw,h:lineH});
+  } else if(currentTool==='arrow'){
+    annotations[currentPage].push({type:'arrow',x1:drawStartX/rect.width,y1:drawStartY/rect.height,x2:ex/rect.width,y2:ey/rect.height});
+  }
+  drawCanvas.getContext('2d').clearRect(0,0,canvasW,canvasH);
+  drawAnnotations(currentPage);
+});
+
+async function saveSession(){
+  if(!currentPdfFile)return;
+  const name=document.getElementById('pdf-name').textContent;
+  const cardRect=pdfCard.getBoundingClientRect();
+  const dotX=cardRect.left+cardRect.width/2,dotY=cardRect.top+cardRect.height/2;
+
+  saveFlash.style.background='rgba(255,255,255,0.035)';
+  setTimeout(()=>saveFlash.style.background='rgba(255,255,255,0)',150);
+
+  if(currentSessionId){
+    // update existing session — no new dot, no new upload
+    await sb.from('sessions').update({annotations,dot_x:dotX,dot_y:dotY}).eq('id',currentSessionId);
+    // update dot position if it moved
+    if(currentDotEl){
+      currentDotEl.style.left=dotX+'px';
+      currentDotEl.style.top=dotY+'px';
+    }
+    pdfCard.classList.remove('open');pdfDoc=null;currentPdfFile=null;
+    return;
+  }
+
+  // new session
+  const path=`${Date.now()}_${name.replace(/\s+/g,'_')}`;
+  const{error:upErr}=await sb.storage.from('pdfs').upload(path,currentPdfFile,{contentType:'application/pdf'});
+  if(upErr)console.error('upload',upErr);
+  const{data,error:dbErr}=await sb.from('sessions').insert({label:name,pdf_path:path,annotations,dot_x:dotX,dot_y:dotY}).select().single();
+  if(dbErr)console.error('db',dbErr);
+  pdfCard.classList.remove('open');pdfDoc=null;currentPdfFile=null;currentSessionId=null;currentDotEl=null;
+  if(data)spawnDot(data);
+}
+
+function spawnDot(session){
+  const wrap=document.createElement('div');wrap.className='sdot';
+  wrap.style.left=session.dot_x+'px';wrap.style.top=session.dot_y+'px';
+  wrap.style.opacity='0';wrap.style.transition='opacity 0.5s ease';
+  const core=document.createElement('div');core.className='sdot-core';
+  core.style.transform='scale(3)';core.style.background='rgba(255,255,255,0.6)';
+  core.style.transition='transform 0.5s ease, background 0.5s ease';
+  const ring=document.createElement('div');ring.className='sdot-ring';
+  const lbl=document.createElement('div');lbl.className='sdot-label';lbl.textContent=session.label;
+  wrap.appendChild(core);wrap.appendChild(ring);wrap.appendChild(lbl);
+  document.body.appendChild(wrap);
+  requestAnimationFrame(()=>{wrap.style.opacity='1';setTimeout(()=>{core.style.transform='';core.style.background='';},100);});
+
+  let clickTimer=null;
+
+  wrap.addEventListener('click',e=>{
+    e.stopPropagation();
+    if(clickTimer){clearTimeout(clickTimer);clickTimer=null;openSession(session,wrap);return;}
+    clickTimer=setTimeout(()=>{clickTimer=null;selectDot(wrap,session);},220);
+  });
+  wrap.addEventListener('dblclick',e=>{
+    e.stopPropagation();
+    if(clickTimer){clearTimeout(clickTimer);clickTimer=null;}
+    openSession(session,wrap);
+  });
+
+  wrap.addEventListener('contextmenu',e=>{
+    e.preventDefault();e.stopPropagation();
+    selectDot(wrap,session);
+    let x=e.clientX,y=e.clientY;
+    if(x+130>window.innerWidth)x=window.innerWidth-135;
+    if(y+90>window.innerHeight)y=window.innerHeight-95;
+    dotMenu.style.left=x+'px';dotMenu.style.top=y+'px';
+    dotMenu.classList.add('on');dotMenuOn=true;
+    closeMenus();dotMenu.classList.add('on');dotMenuOn=true;
+  });
+}
+
+function selectDot(wrap,session){
+  deselectDot();
+  selectedDot=wrap;activeDotSession=session;
+  wrap.classList.add('selected');
+}
+
+document.getElementById('dm-open').addEventListener('click',()=>{
+  dotMenu.classList.remove('on');dotMenuOn=false;
+  const s=activeDotSession,d=selectedDot;
+  if(s)openSession(s,d);
+});
+
+document.getElementById('dm-delete').addEventListener('click',()=>{
+  dotMenu.classList.remove('on');dotMenuOn=false;
+  const s=activeDotSession,d=selectedDot;
+  if(d)deleteSession(d,s);
+});
+
+async function openSession(session,dotEl){
+  menuX=parseFloat(dotEl.style.left)||window.innerWidth/2;
+  menuY=parseFloat(dotEl.style.top)||window.innerHeight/2;
+  deselectDot();
+  // show loading state on dot
+  const core=dotEl.querySelector('.sdot-core');
+  const lbl=dotEl.querySelector('.sdot-label');
+  const origBg=core.style.background;
+  core.style.background='rgba(255,255,255,0.5)';
+  core.style.transform='scale(1.8)';
+  lbl.style.opacity='1';
+  lbl.textContent='loading…';
+  dotEl.style.pointerEvents='none';
+  // pulse animation while loading
+  let pulse=true;
+  let pv=0.3;
+  let pdir=1;
+  const pInterval=setInterval(()=>{
+    pv+=pdir*0.05;
+    if(pv>=0.8){pdir=-1;}else if(pv<=0.2){pdir=1;}
+    core.style.background=`rgba(255,255,255,${pv.toFixed(2)})`;
+  },60);
+
+  try{
+    const{data,error}=await sb.storage.from('pdfs').download(session.pdf_path);
+    if(error)throw error;
+    const ab=await data.arrayBuffer();
+    currentPdfFile=new File([ab],session.label,{type:'application/pdf'});
+    currentSessionId=session.id;
+    currentDotEl=dotEl;
+    clearInterval(pInterval);
+    core.style.transform='';
+    core.style.background='rgba(255,255,255,0.25)';
+    lbl.textContent=session.label;
+    lbl.style.opacity='';
+    dotEl.style.pointerEvents='auto';
+    await loadPdf(ab,session.label,session.annotations);
+  }catch(err){
+    clearInterval(pInterval);
+    core.style.transform='';
+    core.style.background='rgba(255,255,255,0.25)';
+    lbl.textContent=session.label;
+    lbl.style.opacity='';
+    dotEl.style.pointerEvents='auto';
+  }
+}
+
+function deleteSession(dotEl,session){
+  deselectDot();
+  deletedDotEl=dotEl;deletedSession=session;
+  dotEl.style.opacity='0';dotEl.style.pointerEvents='none';
+  dotEl.style.transition='opacity 0.3s ease';
+  toast.classList.add('on');
+  clearTimeout(toastTimer);
+
+  // delete from Supabase immediately
+  if(session&&session.id){
+    sb.from('sessions').delete().eq('id',session.id).then(()=>{});
+    sb.storage.from('pdfs').remove([session.pdf_path]).then(()=>{});
+  }
+
+  toastTimer=setTimeout(()=>{
+    toast.classList.remove('on');
+    dotEl.remove();
+    deletedDotEl=null;deletedSession=null;
+  },5000);
+}
+
+toastUndo.addEventListener('click',async()=>{
+  clearTimeout(toastTimer);toast.classList.remove('on');
+  if(deletedDotEl&&deletedSession){
+    // restore in Supabase
+    const s=deletedSession;
+    await sb.from('sessions').insert({
+      id:s.id,label:s.label,pdf_path:s.pdf_path,
+      annotations:s.annotations,dot_x:s.dot_x,dot_y:s.dot_y
+    });
+    deletedDotEl.style.opacity='1';
+    deletedDotEl.style.pointerEvents='auto';
+  }
+  deletedDotEl=null;deletedSession=null;
+});
+
+function closePdf(){pdfCard.classList.remove('open');pdfDoc=null;}
+
+async function loadSessions(){
+  const{data,error}=await sb.from('sessions').select('*').order('created_at',{ascending:true});
+  if(error||!data)return;
+  data.forEach(s=>spawnDot(s));
+}
+loadSessions();
+
+let dragOn=false,dragOX,dragOY,cardSX,cardSY;
+document.getElementById('pdf-header').addEventListener('mousedown',e=>{
+  if(e.target.closest('button'))return;
+  dragOn=true;dragOX=e.clientX;dragOY=e.clientY;cardSX=parseInt(pdfCard.style.left)||0;cardSY=parseInt(pdfCard.style.top)||0;
+});
+document.addEventListener('mousemove',e=>{if(!dragOn)return;pdfCard.style.left=(cardSX+e.clientX-dragOX)+'px';pdfCard.style.top=(cardSY+e.clientY-dragOY)+'px';});
+document.addEventListener('mouseup',()=>{dragOn=false;});
+
+let resizeOn=false,resizeCorner,resOX,resOY,resSW,resSH,resSL,resST;
+document.querySelectorAll('.rh').forEach(h=>{
+  h.addEventListener('mousedown',e=>{
+    e.stopPropagation();resizeOn=true;resizeCorner=h.dataset.corner;
+    resOX=e.clientX;resOY=e.clientY;resSW=pdfCard.offsetWidth;resSH=pdfCard.offsetHeight;
+    resSL=parseInt(pdfCard.style.left)||0;resST=parseInt(pdfCard.style.top)||0;
+  });
+});
+document.addEventListener('mousemove',e=>{
+  if(!resizeOn)return;
+  const dx=e.clientX-resOX,dy=e.clientY-resOY;
+  const ratio=resSW/resSH;
+  let nw=resSW,nh=resSH,nl=resSL,nt=resST;
+  if(resizeCorner==='br'){nw=Math.max(280,resSW+dx);nh=nw/ratio;}
+  else if(resizeCorner==='bl'){nw=Math.max(280,resSW-dx);nh=nw/ratio;nl=resSL+resSW-nw;}
+  else if(resizeCorner==='tr'){nw=Math.max(280,resSW+dx);nh=nw/ratio;nt=resST+resSH-nh;}
+  else if(resizeCorner==='tl'){nw=Math.max(280,resSW-dx);nh=nw/ratio;nl=resSL+resSW-nw;nt=resST+resSH-nh;}
+  pdfCard.style.width=nw+'px';pdfCard.style.height=nh+'px';pdfCard.style.left=nl+'px';pdfCard.style.top=nt+'px';
+});
+document.addEventListener('mouseup',()=>{if(resizeOn){resizeOn=false;if(pdfDoc)renderPage(currentPage);}});
+</script>
+</body>
+</html>
